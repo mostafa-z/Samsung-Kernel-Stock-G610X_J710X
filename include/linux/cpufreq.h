@@ -516,6 +516,9 @@ extern struct cpufreq_governor cpufreq_gov_blu_active;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_CULTIVATION)
 extern struct cpufreq_governor cpufreq_gov_cultivation;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_cultivation)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_LIONFISH)
+extern struct cpufreq_governor cpufreq_gov_lionfish;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_lionfish)
 #endif
 
 /*********************************************************************
