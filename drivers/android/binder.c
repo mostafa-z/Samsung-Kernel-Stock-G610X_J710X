@@ -446,13 +446,6 @@ static void kfree_no_resched(const void *objp)
 	preempt_enable_no_resched();
 }
 
-static void kfree_no_resched(const void *objp)
-{
-	preempt_disable();
-	kfree(objp);
-	preempt_enable_no_resched();
-}
-
 static void binder_set_nice(long nice)
 {
 	long min_nice;
