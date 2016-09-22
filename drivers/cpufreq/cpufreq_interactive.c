@@ -1300,8 +1300,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		mutex_lock(&gov_lock);
 
 		freq_table = cpufreq_frequency_get_table(policy->cpu);
-		if (!tunables->hispeed_freq)
-			tunables->hispeed_freq = policy->max;
 
 		snprintf(speedchange_task_name, TASK_NAME_LEN, "cfinteractive%d\n",
 					policy->cpu);
