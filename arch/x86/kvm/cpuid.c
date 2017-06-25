@@ -16,6 +16,8 @@
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #include <linux/uaccess.h>
+#include <asm/i387.h> /* For use_eager_fpu.  Ugh! */
+#include <asm/fpu-internal.h> /* For use_eager_fpu.  Ugh! */
 #include <asm/user.h>
 #include <asm/xsave.h>
 #include "cpuid.h"
@@ -87,6 +89,8 @@ int kvm_update_cpuid(struct kvm_vcpu *vcpu)
 		vcpu->arch.guest_xstate_size = best->ebx =
 			xstate_required_size(vcpu->arch.xcr0);
 	}
+
+	vcpu->arch.eager_fpu = guest_cpuid_has_mpx(vcpu);
 
 	/*
 	 * The existing code assumes virtual address is 48-bit in the canonical
@@ -782,12 +786,6 @@ void kvm_cpuid(struct kvm_vcpu *vcpu, u32 *eax, u32 *ebx, u32 *ecx, u32 *edx)
 
 	if (!best)
 		best = check_cpuid_limit(vcpu, function, index);
-
-	/*
-	 * Perfmon not yet supported for L2 guest.
-	 */
-	if (is_guest_mode(vcpu) && function == 0xa)
-		best = NULL;
 
 	if (best) {
 		*eax = best->eax;

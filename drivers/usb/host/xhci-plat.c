@@ -93,7 +93,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
-		return -ENODEV;
+		return irq;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
@@ -224,6 +224,8 @@ static int xhci_plat_remove(struct platform_device *dev)
 		}
 	}
 	xhci_dbg(xhci, "%s: waited %dmsec", __func__, timeout);
+
+	xhci->xhc_state |= XHCI_STATE_REMOVING;
 
 	usb_remove_hcd(xhci->shared_hcd);
 	usb_put_hcd(xhci->shared_hcd);
