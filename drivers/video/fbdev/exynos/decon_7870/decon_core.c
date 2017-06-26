@@ -32,6 +32,9 @@
 #include <linux/seq_file.h>
 #include <linux/of_gpio.h>
 #include <linux/display_state.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 
 #include <media/exynos_mc.h>
 #include <video/mipi_display.h>
@@ -1156,6 +1159,9 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 		DISP_SS_EVENT_LOG(DISP_EVT_BLANK, &decon->sd, ktime_set(0, 0));
 		ret = decon_disable(decon);
 		display_on = false;
+#ifdef CONFIG_STATE_NOTIFIER
+		state_suspend();
+#endif
 		sleep_state = 1;
 		dprintk("[decon_7870] screen is off ...\n");
 		if (ret) {
@@ -1168,6 +1174,9 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 		ret = decon_enable(decon);
 		display_on = true;
 		sleep_state = 0;
+#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+#endif
 		dprintk("[decon_7870] screen is on ...\n");
 		if (ret) {
 			decon_err("failed to enable decon\n");
