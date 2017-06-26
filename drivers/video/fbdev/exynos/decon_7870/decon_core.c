@@ -53,6 +53,21 @@ bool is_display_on()
 	return display_on;
 }
 
+/*
+ * debug = 1 will print all
+ */
+static unsigned int debug = 2;
+module_param_named(debug_mask, debug, uint, 0644);
+
+static unsigned int sleep_state = 0;
+module_param_named(sleep_state, sleep_state, uint, 0644);
+
+#define dprintk(msg...)		\
+do { 				\
+	if (debug)		\
+		pr_info(msg);	\
+} while (0)
+
 #ifdef CONFIG_OF
 static const struct of_device_id decon_device_table[] = {
 	{ .compatible = "samsung,exynos5-decon_driver" },
@@ -1141,6 +1156,8 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 		DISP_SS_EVENT_LOG(DISP_EVT_BLANK, &decon->sd, ktime_set(0, 0));
 		ret = decon_disable(decon);
 		display_on = false;
+		sleep_state = 1;
+		dprintk("[decon_7870] screen is off ...\n");
 		if (ret) {
 			decon_err("failed to disable decon\n");
 			goto blank_exit;
@@ -1150,6 +1167,8 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 		DISP_SS_EVENT_LOG(DISP_EVT_UNBLANK, &decon->sd, ktime_set(0, 0));
 		ret = decon_enable(decon);
 		display_on = true;
+		sleep_state = 0;
+		dprintk("[decon_7870] screen is on ...\n");
 		if (ret) {
 			decon_err("failed to enable decon\n");
 			goto blank_exit;
