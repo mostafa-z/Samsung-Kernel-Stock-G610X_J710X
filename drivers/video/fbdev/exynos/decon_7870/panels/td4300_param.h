@@ -87,12 +87,12 @@ static const unsigned char SEQ_SLEEP_OUT[] = {
 	0x00, 0x00
 };
 
-const const unsigned char SEQ_SLEEP_IN[] = {
+const unsigned char SEQ_SLEEP_IN[] = {
 	0x10,
 	0x00, 0x00
 };
 
-const const unsigned char SEQ_DISPLAY_OFF[] = {
+const unsigned char SEQ_DISPLAY_OFF[] = {
 	0x28,
 	0x00, 0x00
 };

@@ -1210,7 +1210,7 @@ static void conn_gadget_cleanup(void)
     if (_conn_gadget_dev->rd_queue_buf)
         vfree(_conn_gadget_dev->rd_queue_buf);
 
-	kfree(_conn_gadget_dev);
+		kfree(_conn_gadget_dev);
 	_conn_gadget_dev = NULL;
 }
 
