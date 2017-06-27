@@ -717,7 +717,7 @@ static void decon_enable_blocking_mode(struct decon_device *decon,
 	bool enable = false;
 
 	/* TODO: Check a DECON H/W limitation */
-	enable = (rect.w * rect.h) ? true : false;
+	enable = (rect.w & rect.h) ? true : false;
 
 	if (enable) {
 		decon_reg_set_block_mode(DECON_INT, win_idx, rect.x, rect.y,
