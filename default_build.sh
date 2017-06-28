@@ -9,6 +9,7 @@ restore='\033[0m'
 export MODEL=on7xelte
 export ARCH=arm64
 export BUILD_CROSS_COMPILE=android-toolchain-arm64/bin/arm-eabi-
+export SYSROOT=android-toolchain-arm64/aarch64-SMG610-linux-gnu/sysroot/
 export BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
 
 RDIR=$(readlink -f .)
@@ -160,8 +161,7 @@ FUNC_BUILD_KERNEL()
 
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
-			CC='ccache '${BUILD_CROSS_COMPILE}gcc' \
-			--sysroot='$SYSROOT'' || exit -1
+			CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' || exit -1
 
 	FUNC_BUILD_DTIMAGE_TARGET
 
