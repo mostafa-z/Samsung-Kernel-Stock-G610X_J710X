@@ -1,114 +1,41 @@
-#! /bin/bash
-clear
+#!/bin/bash
+# kernel build script by Tkkg1994 v0.6 (optimized from apq8084 kernel source)
 
-LANG=C
+green='\033[01;32m'
+red='\033[01;31m'
+blink_red='\033[05;31m'
+restore='\033[0m'
 
-#------------------------------------
-# define variables
-#------------------------------------
-TODAY=`date '+%Y%m%d'`;
-GIT_BRANCH=`git symbolic-ref --short HEAD`;
-GITCCOUNT=$(git shortlog | grep -E '^[ ]+\w+' | wc -l);
-COLOR_RED="\033[0;31m"
-COLOR_GREEN="\033[1;32m"
-COLOR_NEUTRAL="\033[0m"
-#LOG=(WORKING-DIR/package/compile.log);
-LOG=(WORKING-DIR/temp/compile.log);
-TC=(android-toolchain-arm64/bin/arm-eabi-);
-SYSROOT=(android-toolchain/aarch64-SMG610-linux-gnu/sysroot/);
-KD=$(readlink -f .);
-WD=(WORKING-DIR);
-RK=(READY-KERNEL);
-TOOLS=$WD/tools;
-BOOT=(arch/arm64/boot);
-DMODEL=(on7xelte);
-STOCK_DEF=(on7xelteswa_00_defconfig);
-#KERNEL_CONFIG_FILE=(gabriel_g610f_defconfig);
-DCONF=(arch/arm64/configs);
-#STOCK_DEF=(g3-global_com-perf_defconfig);
-NAME=Gabriel-$(grep "CONFIG_LOCALVERSION=" arch/arm64/configs/gabriel_g610f_defconfig | cut -c 25-28);
+export MODEL=on7xelte
+export ARCH=arm64
+export BUILD_CROSS_COMPILE=android-toolchain-arm64/bin/arm-eabi-
+export BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
 
-#export PATH=$PATH:tools/lz4demo
-#===============================================================================
-# Define Functions
-#===============================================================================
+RDIR=$(readlink -f .)
+OUTDIR=$RDIR/arch/$ARCH/boot
+DTSDIR=$RDIR/arch/$ARCH/boot/dts
+DTBDIR=$OUTDIR/dtb
+DTCTOOL=$RDIR/scripts/dtc/dtc
+INCDIR=$RDIR/include
+WD=$RDIR/WORKING-DIR
+RK=$RDIR/READY-KERNEL
+PAGE_SIZE=2048
+DTB_PADDING=0
+KERNEL_DEFCONFIG=on7xelteswa_00_defconfig
+NAME=Gabriel-$(grep "CONFIG_LOCALVERSION=" $KERNEL_DEFCONFIG | cut -c 25-28);
+FILENAME=($NAME-$(date +"[%d-%m-%y]")-$MODEL);
 
-# to generate new file name if exist.(add a digit to new one)
-FILENAME()
+FUNC_CLEAN_DTB()
 {
-	ZIPFILE=$FILENAME
-	if [[ -e $RK/$ZIPFILE.zip ]] ; then
-    		i=0
-    	while [[ -e $RK/$ZIPFILE-$i.zip ]] ; do
-        	let i++
-    	done
-    FILENAME=$ZIPFILE-$i
-	fi
-}
-
-# determine how many core your CPU have to build
-NR_CPUS()
-{
-	# Idea by savoca
-	NR_CPUS=$(grep -c ^processor /proc/cpuinfo)
-
-	if [ "$NR_CPUS" -le "2" ]; then
-		NR_CPUS=4;
-		echo "Building kernel with 4 CPU threads";
-	else
-		echo -e "\e[1;44mBuilding kernel with $NR_CPUS CPU threads\e[m"
-	fi;
-}
-
-# check if kernel zip file had build or not
-FILE_CHECK()
-{
-	echo -e "\n---------------------------------------------------"
-	echo -e "Check for coocked file:"
-	if [ -f $RK/$FILENAME.zip ]; then
-		echo -e $COLOR_GREEN
-		echo "File name is: "$FILENAME".zip"
-		echo -e $COLOR_NEUTRAL
-	else
-		echo -e $COLOR_RED
-		echo "oops, &*%^&(%#!@#*(& !!"
-		echo -e $COLOR_NEUTRAL		
-	fi;
-}
-
-# check for errors
-LOG_CHECK()
-{
-	echo -e "---------------------------------------------------"
-	echo -e "Check for compile errors:"
-	echo -e $COLOR_RED
-
-#	grep error $WD/package/compile.log
-#	grep forbidden $WD/package/compile.log
-#	grep warning $WD/package/compile.log
-#	grep fail $WD/package/compile.log
-#	grep no $WD/package/compile.log
-	grep error $WD/temp/compile.log
-	grep forbidden $WD/temp/compile.log
-	grep warning $WD/temp/compile.log
-	grep fail $WD/temp/compile.log
-	grep no $WD/temp/compile.log
-	echo -e $COLOR_NEUTRAL
-
-	echo -e "---------------------------------------------------"
-}
-
-# refresh for new build
-CLEANUP()
-{
-	make ARCH=arm64 mrproper;
+	make ARCH=$ARCH mrproper;
 	make clean;
 
+
 # force regeneration of .dtb and zImage files for every compile
-	rm -f arch/arm64/boot/*.dtb
-	rm -f arch/arm64/boot/*.cmd
-	rm -f arch/arm64/boot/Image
-	rm -f arch/arm64/boot/Image.gz
+	rm -f arch/$ARCH/boot/*.dtb
+	rm -f arch/$ARCH/boot/*.cmd
+	rm -f arch/$ARCH/boot/zImage
+	rm -f arch/$ARCH/boot/Image
 
 	if [ -d $WD/temp ]; then
 		rm -rf $WD/temp/*
@@ -116,223 +43,248 @@ CLEANUP()
 		mkdir $WD/temp
 	fi;
 
-### cleanup files creted previously
+	if [ -d $DTBDIR ]; then
+		rm -rf $DTBDIR/*
+	else
+		mkdir $DTBDIR
+	fi;
 
-	for i in $(find "$KD"/ -name "*.ko"); do
+### cleanup files creted previously
+	for i in $(find "$RDIR"/ -name "boot.img"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$KD"/ -name "boot.img"); do
+	for i in $(find "$RDIR"/ -name "Image"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$KD"/ -name "dt.img"); do
+	for i in $(find "$RDIR"/ -name "dtb.img"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$KD"/ -name "*.zip" -not -path "*$RK/*"); do
+	for i in $(find "$RDIR"/ -name "*.zip" -not -path "*$RK/*"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$KD"/ -name "Image"); do
+	for i in $(find "$RDIR"/ -name "zImage"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$KD"/ -name "kernel_config_view_only"); do
+	for i in $(find "$RDIR"/ -name "kernel_config_view_only"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$KD"/ -name "compile.log"); do
-		rm -fv "$i";
-	done;
+
+#	if ! [ -d $RDIR/arch/$ARCH/boot/dts ] ; then
+#		echo "no directory : "$RDIR/arch/$ARCH/boot/dts""
+#	else
+#		echo "rm files in : "$RDIR/arch/$ARCH/boot/dts/*.dtb""
+#		rm $RDIR/arch/$ARCH/boot/dts/*.dtb
+#		rm $RDIR/arch/$ARCH/boot/dtb/*.dtb
+#		rm $RDIR/arch/$ARCH/boot/boot.img-dtb
+#		rm $RDIR/arch/$ARCH/boot/boot.img-zImage
+#	fi
 
 	git checkout android-toolchain-arm64/
 }
 
-#===============================================================================
-# Build Process
-#===============================================================================
-
-REBUILD()
+FUNC_CLEAN_POST_BUILD()
 {
-clear
-FILENAME=($NAME-$(date +"[%d-%m-%y]")-$MODEL);
-FILENAME;
-NR_CPUS;
+	PBFILES="$OUTDIR/Image
+	$OUTDIR/Image.gz
+	arch/arm64/kernel/vdso/vdso.lds 
+	arch/arm64/kernel/vdso/vdso.so
+	arch/arm64/kernel/vdso/vdso.so.dbg 
+	arch/arm64/kernel/vmlinux.lds"
 
-	echo -e "\e[41mREBUILD\e[m"
-	echo ""
-	echo -e $COLOR_GREEN"Git Branch is at: "$GIT_BRANCH" commits: "$GITCCOUNT" " $COLOR_NEUTRAL
-	echo ""
-	sleep 3
-
-#	touch $WD/package/compile.log
-	touch $WD/temp/compile.log
-	echo -e "\n---------------------------------------------------" > $LOG
-	echo -e "\nGIT branch and last commit : " >> $LOG
-	git log --oneline --decorate -n 1 >> $LOG
-	echo -e ""
-	echo "CPU : compile with "$NR_CPUS"-way multitask processing" >> $LOG
-	echo "Toolchain: "$TC >> $LOG
-
-	TIMESTAMP1=$(date +%s)
-	make ARCH=arm64 CROSS_COMPILE=$TC $CUSTOM_DEF
-	echo -e $COLOR_GREEN"\nI'm coocking, make a coffee ..." $COLOR_NEUTRAL
-	echo ""
-	make ARCH=arm64 CROSS_COMPILE=$TC CC='ccache '${TC}gcc' --sysroot='$SYSROOT'' -j $NR_CPUS | grep :
-	clear
-
-POST_BUILD >> $LOG
-FILE_CHECK;
-LOG_CHECK;
+	for f in $PBFILES; do
+		git checkout $f
+	done
 }
 
-REBUILD_NCONF()
+FUNC_BUILD_DTIMAGE_TARGET()
 {
-clear
-FILENAME=($NAME-$(date +"[%y-%m-%d]")-$MODEL);
-FILENAME;
-NR_CPUS;
+	[ -f "$DTCTOOL" ] || {
+		echo "You need to run ./build.sh first!"
+		exit 1
+	}
 
-	echo -e "\e[41mREBUILD\e[m"
-	echo -e ""
-	echo -e $COLOR_GREEN"Git Branch is at : "$GIT_BRANCH $COLOR_RED">>> "$COLOR_GREEN$GITCCOUNT" commits" $COLOR_NEUTRAL
-	echo -e ""
-	sleep 3
+	case $MODEL in
+	on7xelte)
+		DTSFILES="exynos7870-on7xelte_ltn_open_00 exynos7870-on7xelte_ltn_open_01
+				exynos7870-on7xelte_ltn_open_02 exynos7870-on7xelte_swa_open_00
+				exynos7870-on7xelte_swa_open_01 exynos7870-on7xelte_swa_open_02"
+		;;
+	*)
+		echo "Unknown device: $MODEL"
+		exit 1
+		;;
+	esac
 
-	echo -e "\n---------------------------------------------------" > $LOG
+	mkdir -p $OUTDIR $DTBDIR
 
-	echo -e "\nGIT branch and last commit : " >> $LOG
-	git log --oneline --decorate -n 1 >> $LOG
-	echo -e ""
-	echo -e "CPU : compile with "$NR_CPUS"-way multitask processing" >> $LOG
-	echo -e "Toolchain: "$TC >> $LOG
+	cd $DTBDIR || {
+		echo "Unable to cd to $DTBDIR!"
+		exit 1
+	}
 
-	TIMESTAMP1=$(date +%s)
-	make ARCH=arm64 CROSS_COMPILE=$TC $CUSTOM_DEF
-	make ARCH=arm64 CROSS_COMPILE=$TC nconfig
-	echo -e $COLOR_GREEN"\nI'm coocking, make a coffee ..." $COLOR_NEUTRAL
-	echo ""
-	make ARCH=arm64 CROSS_COMPILE=$TC CC='ccache '${TC}gcc' --sysroot='$SYSROOT'' -j $NR_CPUS | grep :
-	clear
+	rm -f ./*
 
-POST_BUILD >> $LOG
-FILE_CHECK;
-LOG_CHECK;
+	echo "Processing dts files..."
+
+	for dts in $DTSFILES; do
+		echo "=> Processing: ${dts}.dts"
+		${CROSS_COMPILE}cpp -nostdinc -undef -x assembler-with-cpp -I "$INCDIR" "$DTSDIR/${dts}.dts" > "${dts}.dts"
+		echo "=> Generating: ${dts}.dtb"
+		$DTCTOOL -p $DTB_PADDING -i "$DTSDIR" -O dtb -o "${dts}.dtb" "${dts}.dts"
+	done
+
+	echo "Generating dtb.img..."
+	$RDIR/scripts/dtbTool/dtbTool -o "$OUTDIR/dtb.img" -d "$DTBDIR/" -s $PAGE_SIZE
+
+	echo "Done."
 }
 
-CONTINUE_BUILD()
+FUNC_BUILD_KERNEL()
 {
-	clear
-	echo -e "\e[41mCONTINUE_BUILD\e[m"
-	sleep 3
-	time make ARCH=arm64 CROSS_COMPILE=$TC -j ${CPUNUM}
-	clear
+		echo -e "${green}"
+		echo "-------------------------"
+        echo "START : FUNC_BUILD_KERNEL"
+		echo "-------------------------"
+		echo -e "${restore}"
+        echo "build common config="$KERNEL_DEFCONFIG ""
+        echo "build variant config="$MODEL ""
+
+	FUNC_CLEAN_DTB
+
+#	make ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE $KERNEL_DEFCONFIG
+#	make ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' -j $BUILD_JOB_NUMBER
+
+	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
+			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
+			$KERNEL_DEFCONFIG || exit -1
+
+	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
+			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
+			CC='ccache '${BUILD_CROSS_COMPILE}gcc' \
+			--sysroot='$SYSROOT'' || exit -1
+
+	FUNC_BUILD_DTIMAGE_TARGET
+
+	echo -e "${green}"
+	echo "-------------------------"
+	echo "END   : FUNC_BUILD_KERNEL"
+	echo "-------------------------"
+	echo -e "${restore}"
 }
 
-POST_BUILD()
+FUNC_BUILD_RAMDISK()
 {
-	echo -e "\nbuild for :" $MODEL
-	echo -e "\nchecking for compiled kernel..."
-	echo ""
-if [ -f arch/arm64/boot/Image ]
-	then
+	mv $RDIR/arch/$ARCH/boot/Image $RDIR/arch/$ARCH/boot/boot.img-zImage
+	mv $RDIR/arch/$ARCH/boot/dtb.img $RDIR/arch/$ARCH/boot/boot.img-dtb
 
-case $DMODEL in
-on7xelte)
-	DTSFILES="exynos7870-on7xelte_ltn_open_00 exynos7870-on7xelte_ltn_open_01
-		exynos7870-on7xelte_ltn_open_02 exynos7870-on7xelte_swa_open_00
-		exynos7870-on7xelte_swa_open_01 exynos7870-on7xelte_swa_open_02"
-	;;
-*)
-	echo "Unknown device: $DMODEL"
-	exit 1
-	;;
-esac
+	case $MODEL in
+	on7xelte)
+		rm -f $WD/tools/split_img/boot.img-zImage
+		rm -f $WD/tools/split_img/boot.img-dtb
+		mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $WD/tools/split_img/boot.img-zImage
+		mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $WD/tools/split_img/boot.img-dtb
 
-echo "Processing dts files."
-for dts in $DTSFILES; do
-	echo "=> Processing: ${dts}.dts"
-	${CROSS_COMPILE}cpp -nostdinc -undef -x assembler-with-cpp -I "$KD/include" "$BOOT/dts/${dts}.dts" > "${dts}.dts"
-	echo "=> Generating: ${dts}.dtb"
-	$KD/scripts/dtc/dtc -p 0 -i "$BOOT/dts" -O dtb -o "${dts}.dtb" "${dts}.dts"
-done
+		if [ -d $WD/tools/ramdisk ]; then
+			rm -rf $WD/tools/ramdisk/*
+		else
+			mkdir $WD/tools/ramdisk
+		fi;
 
-echo "Generating dtb.img."
-$TOOLS/dtbTool -o "$BOOT/dt.img" -d "$BOOT/dtb/" -s 2048
-echo "Done."
+		\cp -r $WD/G610F/ramdisk $WD/tools
+		\cp -r $WD/ramdisk/ramdisk $WD/tools
+		cd $WD/tools
+		cd ramdisk
+			chmod 644 file_contexts
+			chmod 644 se*
+			chmod 644 *.rc
+			chmod 750 init*
+			chmod 640 fstab*
+			chmod 644 default.prop
+			chmod 771 data
+			chmod 755 dev
+			chmod 755 proc
+			chmod 750 sbin
+			chmod 750 sbin/*
+			chmod 755 sys
+			chmod 755 system
+		cd ..
+		./repackimg.sh
+		echo SEANDROIDENFORCE >> image-new.img
+		rm -rf $WD/tools/ramdisk/*
+		;;
+	*)
+		echo "Unknown device: $MODEL"
+		exit 1
+		;;
+	esac
+}
 
-#	echo "generating device tree..."
-#	echo ""
-#	$TOOLS/dtbTool -o $BOOT/dt.img -s 2048 -p $DTC/ $BOOT/ >> $LOG
+FUNC_BUILD_ZIP()
+{
+	if [ -d $WD/temp ]; then
+		rm -rf $WD/temp/*
+	else
+		mkdir $WD/temp
+	fi;
 
-#	if [ -f $BOOT/dt.img ]; then
-#		echo -e "\nDevice Tree : Builded" >> $LOG
-#	else
-#		echo -e "\nDevice Tree : Failed !" >> $LOG
-#	fi;
+# to generate new file name if exist.(add a digit to new one)
+	ZIPFILE=$FILENAME
+	if [[ -e $RK/$ZIPFILE.zip ]] ; then
+			i=0
+		while [[ -e $RK/$ZIPFILE-$i.zip ]] ; do
+			let i++
+		done
+	    FILENAME=$ZIPFILE-$i
+	fi
 
-	# copy all selected ramdisk files to temp folder
-	\cp -r $WD/anykernel/* $WD/temp
-#	\cp -r $WD/$RAMDISK/* $WD/temp
-	\cp -r $WD/ramdisk/* $WD/temp
+	mv -f $WD/tools/image-new.img $WD/temp/boot.img
+	mv -f $RDIR/build.log $WD/temp/build.log
 
-	echo "copy zImage and dt.img"
-	echo ""
-	\cp -v $BOOT/Image $WD/temp/zImage >> $LOG
-	\cp -v $BOOT/dt.img $WD/temp/dtb >> $LOG
+	\cp -r $WD/package/* $WD/temp
 
-#	echo "creating boot.img"
-#	echo ""
-#	$TOOLS/mkboot $WD/temp $WD/package/boot.img >> $LOG
-
-	echo "copy .config"
-#	\cp -v .config $WD/package/kernel_config_view_only >> $LOG
-	\cp -v .config $WD/temp/kernel_config_view_only >> $LOG
-
-	echo "Create flashable zip"
-#	cd $WD/package
 	cd $WD/temp
-	zip kernel.zip -r *
+	zip kernel.zip -r * > /dev/null
+	cd $RDIR
 
-	echo "copy flashable zip to output > flashable"
-	cd ..
-	cd ..
-#	cp -v $WD/package/kernel.zip $RK/$FILENAME.zip
 	cp -v $WD/temp/kernel.zip $RK/$FILENAME.zip
 	md5sum $RK/$FILENAME.zip > $RK/$FILENAME.zip.md5
-		
-	#This part is for me on Workin Dir
-	echo -e "\nFlashable zip is ready" >> $LOG
-
-	TIMESTAMP2=$(date +%s) 
-	TIME=$(($TIMESTAMP2 - $TIMESTAMP1))
-	echo -e "\nCompile time: "$TIME "seconds" >> $LOG
-
-else
-	echo "Kernel STUCK in BUILD! no zImage exist !"
-
-### THANKS GOD
-
-fi;
 }
 
-echo "What to do What not to do ?!";
-select CHOICE in G610F CONTINUE_BUILD G610F_STOCK_DEF G610F_NCONF; do
+echo -e "${green}"
+echo "----------------------"
+echo "Which kernel config ?!";
+echo "----------------------"
+echo -e "${restore}"
+select CHOICE in custom stock; do
 	case "$CHOICE" in
-		"G610F")
-			CLEANUP;
-			CUSTOM_DEF=gabriel_g610f_defconfig
-			MODEL=G610F
-			RAMDISK=G610F
-			REBUILD;
+		"custom")
+			KERNEL_DEFCONFIG=gabriel_g610f_defconfig
 			break;;
-		"CONTINUE_BUILD")
-			CONTINUE_BUILD;
-			break;;
-		"G610F_STOCK_DEF")
-			CUSTOM_DEF=$STOCK_DEF 
-			RAMDISK=G610F
-			REBUILD;
-			break;;
-		"G610F_NCONF")
-			CUSTOM_DEF=$STOCK_DEF
-			RAMDISK=G610F
-			REBUILD_NCONF;
+		"stock")
+			KERNEL_DEFCONFIG=on7xelteswa_00_defconfig
 			break;;
 	esac;
 done;
+
+# MAIN FUNCTION
+rm -rf ./build.log
+(
+	DATE_START=$(date +"%s")
+
+	FUNC_BUILD_KERNEL
+	FUNC_BUILD_RAMDISK
+	FUNC_BUILD_ZIP
+	FUNC_CLEAN_POST_BUILD
+
+	DATE_END=$(date +"%s")
+
+	echo -e "${green}"
+	echo "-------------------"
+	echo "Build Completed in:"
+	echo "-------------------"
+	echo -e "${restore}"
+
+	DATE_END=$(date +"%s")
+	DIFF=$(($DATE_END - $DATE_START))
+	echo "Time: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
+) 2>&1	| tee -a ./build.log
