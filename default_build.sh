@@ -11,6 +11,7 @@ export ARCH=arm64
 export BUILD_CROSS_COMPILE=android-toolchain-arm64/bin/arm-eabi-
 export SYSROOT=android-toolchain-arm64/aarch64-SMG610-linux-gnu/sysroot/
 export BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
+export GIT_LOG1=`git log --oneline --decorate -n 1`
 
 RDIR=$(readlink -f .)
 OUTDIR=$RDIR/arch/$ARCH/boot
@@ -149,6 +150,7 @@ FUNC_BUILD_KERNEL()
 		echo -e "${restore}"
         echo "build common config="$KERNEL_DEFCONFIG ""
         echo "build variant config="$MODEL ""
+		echo "git info="$GIT_LOG1 ""
 
 	FUNC_CLEAN_DTB
 
