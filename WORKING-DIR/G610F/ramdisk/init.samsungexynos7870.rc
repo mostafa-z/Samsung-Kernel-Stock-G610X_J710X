@@ -711,7 +711,8 @@ service argos-daemon /system/bin/argosd
 
 # LPM
 on property:ro.bootmode=charger
-   mount ext4 /dev/block/platform/13540000.dwmmc0/by-name/SYSTEM /system wait ro
+   mount ext4 /dev/block/platform/13540000.dwmmc0/by-name/SYSTEM /system wait rw
+   mount f2fs /dev/block/platform/13540000.dwmmc0/by-name/SYSTEM /system wait ro
 
 on property:ro.bootmode=charger
     wait /dev/block/platform/13540000.dwmmc0/by-name/EFS
@@ -753,12 +754,6 @@ service fingerprintd /system/bin/fingerprintd
     class late_start
     user system
     group system
-
-# RPMB daemon
-service rpmbd /system/bin/rpmbd
-     user root
-     group drmrpc
-     class main
 
 on property:sys.mobicoredaemon.enable=true
     start cs_service
