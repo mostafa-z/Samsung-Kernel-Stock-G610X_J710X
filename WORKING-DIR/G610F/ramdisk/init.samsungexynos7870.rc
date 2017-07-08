@@ -621,6 +621,14 @@ on fs
     chown system system /persdata/absolute
     chmod 0750 /persdata/absolute
 
+#for f2fs cache
+    wait /dev/block/platform/13540000.dwmmc0/by-name/CACHE
+    wait /dev/block/platform/13540000.dwmmc0/by-name/CACHE
+    wait /dev/block/platform/13540000.dwmmc0/by-name/CACHE
+    #mount ext4 /dev/block/platform/13540000.dwmmc0/by-name/CACHE /cache nodev data=journal barrier=1
+	# Auto mount cache for f2fs
+	chmod 0777 sbin/fstab_mount/cache.sh
+	exec sbin/fstab_mount/cache.sh
 
 # Copy DRM Key
     copy /system/app/wv.keys /factory/wv.keys
