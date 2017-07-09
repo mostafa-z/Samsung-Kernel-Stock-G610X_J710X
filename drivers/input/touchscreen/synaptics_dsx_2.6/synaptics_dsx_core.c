@@ -5033,11 +5033,6 @@ static int __init synaptics_rmi4_init(void)
 		return -ENODEV;
 	}
 
-	if (bootmode == 2) {
-		pr_err("%s : Do not load driver due to : device entered recovery mode %d\n", __func__, bootmode);
-		return -ENODEV;
-	}
-
 	retval = synaptics_rmi4_bus_init_v26();
 	if (retval)
 		return retval;
