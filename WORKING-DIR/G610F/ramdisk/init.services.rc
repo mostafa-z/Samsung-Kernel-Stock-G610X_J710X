@@ -9,7 +9,7 @@ on boot
 	
 on property:sys.boot_completed=1
     start sysinit
-    start wakelock
+    start bbinstall
 
 service kernelinit /sbin/kernelinit.sh
     user root
@@ -24,7 +24,7 @@ service sysinit /sbin/sysinit.sh
     oneshot
     disabled
 
-service wakelock /sbin/wakelock.sh
+service bbinstall /sbin/ext/bbinstall.sh
     class late_start
     user root
     seclabel u:r:init:s0
