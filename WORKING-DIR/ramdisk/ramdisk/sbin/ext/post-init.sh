@@ -21,8 +21,9 @@ OPEN_RW()
 OPEN_RW;
 
 # some nice thing for dev
-if [ ! -e /cpufreq ]; then
-	$BB ln -s /sys/devices/system/cpu/cpu0/cpufreq/ /cpufreq;
+if [ ! -e /cpufreq_l ]; then
+	$BB ln -s /sys/devices/system/cpu/cpu0/cpufreq/ /cpufreq_l;
+	$BB ln -sf /sys/devices/system/cpu/cpu4/cpufreq/ /cpufreq_b;
 	$BB ln -s /sys/devices/system/cpu/cpufreq/mp-cpufreq/ /mp-cpufreq;
 	$BB ln -s /sys/power/cpuhotplug/ /cpuhotplug;
 fi;
@@ -62,44 +63,45 @@ $BB chmod 666 /sys/module/lowmemorykiller/parameters/cost;
 $BB chmod 666 /sys/module/lowmemorykiller/parameters/adj;
 $BB chmod 666 /sys/module/lowmemorykiller/parameters/minfree
 
-# make sure we own the device nodes
-$BB chown system /sys/devices/system/cpu/cpu0/cpufreq/*
-$BB chown system /sys/devices/system/cpu/cpu1/online
-$BB chown system /sys/devices/system/cpu/cpu2/online
-$BB chown system /sys/devices/system/cpu/cpu3/online
-$BB chown system /sys/devices/system/cpu/cpu4/online
-$BB chown system /sys/devices/system/cpu/cpu5/online
-$BB chown system /sys/devices/system/cpu/cpu6/online
-$BB chown system /sys/devices/system/cpu/cpu7/online
-$BB chmod 666 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
-$BB chmod 666 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-$BB chmod 666 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
-$BB chmod 444 /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq
-$BB chmod 444 /sys/devices/system/cpu/cpu0/cpufreq/stats/*
-$BB chmod 666 /sys/devices/system/cpu/cpu1/online
-$BB chmod 666 /sys/devices/system/cpu/cpu2/online
-$BB chmod 666 /sys/devices/system/cpu/cpu3/online
-$BB chmod 666 /sys/devices/system/cpu/cpu4/online
-$BB chmod 666 /sys/devices/system/cpu/cpu5/online
-$BB chmod 666 /sys/devices/system/cpu/cpu6/online
-$BB chmod 666 /sys/devices/system/cpu/cpu7/online
-$BB chmod 666 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster0_max_freq
-$BB chmod 666 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster0_min_freq
-$BB chmod 666 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster1_max_freq
-$BB chmod 666 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster1_min_freq
-$BB chmod 444 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster0_freq_table
-$BB chmod 444 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster1_freq_table
+# take ownership and permissions
+echo 0 > /cpuhotplug/enable;
+sleep 0.5;
+
+for i in cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7; do
+	$BB chown system /sys/devices/system/cpu/$i/online
+	$BB chmod 666 /sys/devices/system/cpu/$i/online
+done;
+
+for i in cpu0 cpu4; do
+$BB chown system /sys/devices/system/cpu/$i/cpufreq/*
+$BB chown system /sys/devices/system/cpu/$i/cpufreq/*
+$BB chmod 666 /sys/devices/system/cpu/$i/cpufreq/scaling_governor
+$BB chmod 666 /sys/devices/system/cpu/$i/cpufreq/scaling_max_freq
+$BB chmod 666 /sys/devices/system/cpu/$i/cpufreq/scaling_min_freq
+$BB chmod 444 /sys/devices/system/cpu/$i/cpufreq/cpuinfo_cur_freq
+$BB chmod 444 /sys/devices/system/cpu/$i/cpufreq/stats/*
+done;
+
+for i in 0 1; do
+$BB chmod 666 /mp-cpufreq/cluster$i_max_freq
+$BB chmod 666 /mp-cpufreq/cluster$i_min_freq
+$BB chmod 444 /mp-cpufreq/cluster$i_freq_table
+done;
 
 #Governor Tuning
-echo interactive > /cpufreq/scaling_governor;
+for i in cpufreq_l cpufreq_b; do
+echo interactive > /$i/scaling_governor;
 sleep 0.5;
-echo 99 > /cpufreq/interactive/go_hispeed_load; #default 89
-echo 902000 > /cpufreq/interactive/hispeed_freq; #default 900000
-echo 40000 > /cpufreq/interactive/min_sample_time; #default 40000
-echo "70 546000:60 676000:65 757000:70 839000:75 902000:80 1014000:85 1144000:90 1248000:95 1352000:100 1482000:110 1586000:200" > /cpufreq/interactive/target_loads; #default 75 1248000:85
-echo 20000 > /cpufreq/interactive/timer_rate; #default 20000
-echo 20000 > /cpufreq/interactive/timer_slack; #default 20000
+echo 99 > /$i/interactive/go_hispeed_load; #default 89
+echo 902000 > /$i/interactive/hispeed_freq; #default 900000
+echo 40000 > /$i/interactive/min_sample_time; #default 40000
+echo "70 546000:60 676000:65 757000:70 839000:75 902000:80 1014000:85 1144000:90 1248000:95 1352000:100 1482000:110 1586000:200" > /$i/interactive/target_loads; #default 75 1248000:85
+echo 20000 > /$i/interactive/timer_rate; #default 20000
+echo 20000 > /$i/interactive/timer_slack; #default 20000
 $BB sync;
+done;
+
+echo 1 > /cpuhotplug/enable;
 }
 
 if [ ! -d /data/.gabriel ]; then
