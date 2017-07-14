@@ -144,5 +144,10 @@ done;
 # Restore selinux
 echo "1" > /sys/fs/selinux/enforce
 
+# trim partitions on boot
+fstrim -v /system
+fstrim -v /cache
+fstrim -v /data
+
 TIME_NOW=$(date)
 echo "$TIME_NOW" > /data/.gabriel/boot.txt
