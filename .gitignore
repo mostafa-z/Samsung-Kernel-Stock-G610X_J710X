@@ -70,7 +70,6 @@ include/generated
 scripts/rkp_cfp/tmp
 arch/arm64/boot/dtb/
 arch/*/include/generated
-READY-KERNEL/
 
 # stgit generated dirs
 patches-*
