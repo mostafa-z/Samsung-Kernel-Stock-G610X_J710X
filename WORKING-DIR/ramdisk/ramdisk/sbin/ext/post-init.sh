@@ -51,8 +51,6 @@ CRITICAL_PERM_FIX;
 
 SYSTEM_TUNING()
 {
-echo interactive > /cpufreq/scaling_governor;
-
 # KERNEL-TWEAKS
 echo "0" > /proc/sys/vm/oom_kill_allocating_task;
 echo "0" > /proc/sys/vm/panic_on_oom;
@@ -91,6 +89,17 @@ $BB chmod 666 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster1_max_freq
 $BB chmod 666 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster1_min_freq
 $BB chmod 444 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster0_freq_table
 $BB chmod 444 /sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster1_freq_table
+
+#Governor Tuning
+echo interactive > /cpufreq/scaling_governor;
+sleep 0.5;
+echo 99 > /cpufreq/interactive/go_hispeed_load; #default 89
+echo 902000 > /cpufreq/interactive/hispeed_freq; #default 900000
+echo 40000 > /cpufreq/interactive/min_sample_time; #default 40000
+echo "70 546000:60 676000:65 757000:70 839000:75 902000:80 1014000:85 1144000:90 1248000:95 1352000:100 1482000:110 1586000:200" > /cpufreq/interactive/target_loads; #default 75 1248000:85
+echo 20000 > /cpufreq/interactive/timer_rate; #default 20000
+echo 20000 > /cpufreq/interactive/timer_slack; #default 20000
+$BB sync;
 }
 
 if [ ! -d /data/.gabriel ]; then
