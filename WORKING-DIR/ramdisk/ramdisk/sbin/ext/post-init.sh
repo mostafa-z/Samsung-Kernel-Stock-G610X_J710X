@@ -134,3 +134,13 @@ OPEN_RW;
 # Fix critical perms again after init.d mess
 CRITICAL_PERM_FIX;
 
+# disable block iostats
+for i in /sys/block/*/queue; do
+	echo 0 > $i/iostats
+done;
+
+# Restore selinux
+echo "1" > /sys/fs/selinux/enforce
+
+TIME_NOW=$(date)
+echo "$TIME_NOW" > /data/.gabriel/boot.txt
