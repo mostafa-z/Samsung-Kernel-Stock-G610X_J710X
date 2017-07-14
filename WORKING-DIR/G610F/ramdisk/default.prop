@@ -23,20 +23,7 @@ ro.config.tima=0
 ro.config.dmverity=false
 ro.sec.fle.encryption=false
 ro.securestorage.support=false
-wlan.wfd.hdcp = disable
-
-#Disable Android Logging
-debugtool.anrhistory=0
-profiler.debugmonitor=false
-profiler.launch=false
-profiler.hung.dumpdobugreport=false
-
-# Disable logcat
-logcat.live=disable
-
-# Device will boot faster
-persist.sys.shutdown.mode=hibernate
-ro.config.hw_quickpoweron=true
+wlan.wfd.hdcp=disable
 
 #
 # BOOTIMAGE_BUILD_PROPERTIES
