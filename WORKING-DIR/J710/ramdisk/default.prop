@@ -1,0 +1,25 @@
+#
+# ADDITIONAL_DEFAULT_PROPERTIES
+#
+telephony.lteOnCdmaDevice=0
+rild.libpath=/system/lib/libsec-ril.so
+rild.libpath2=/system/lib/libsec-ril-dsds.so
+persist.security.ams.enforcing=3
+ro.secure=1
+ro.allow.mock.location=0
+ro.debuggable=0
+ro.adb.secure=1
+persist.sys.usb.config=mtp
+ro.zygote=zygote32
+dalvik.vm.image-dex2oat-Xms=64m
+dalvik.vm.image-dex2oat-Xmx=64m
+dalvik.vm.dex2oat-Xms=64m
+dalvik.vm.dex2oat-Xmx=512m
+ro.dalvik.vm.native.bridge=0
+debug.atrace.tags.enableflags=0
+#
+# BOOTIMAGE_BUILD_PROPERTIES
+#
+ro.bootimage.build.date=Wed Apr 12 15:03:17 KST 2017
+ro.bootimage.build.date.utc=1491976997
+ro.bootimage.build.fingerprint=samsung/j7xeltexx/j7xelte:6.0.1/MMB29K/J710FXXU3AQD4:user/test-keys
