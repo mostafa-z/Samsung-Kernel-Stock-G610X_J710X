@@ -14,7 +14,6 @@ import /init.carrier.rc
 import /init.sec_debug.rc
 import /init.container.rc
 import /init.rilcommon.rc
-import /init.secstorage.rc
 import /init.services.rc
 import /init.supersu.rc
 
