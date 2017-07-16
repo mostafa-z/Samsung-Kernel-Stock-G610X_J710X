@@ -25,7 +25,6 @@ PAGE_SIZE=2048
 DTB_PADDING=0
 KERNEL_DEFCONFIG=on7xelteswa_00_defconfig
 NAME=Gabriel-$(grep "CONFIG_LOCALVERSION=" $KERNEL_DEFCONFIG | cut -c 25-28);
-FILENAME=($NAME-$(date +"[%d-%m-%y]")-$MODEL);
 
 FUNC_CLEAN_DTB()
 {
@@ -111,6 +110,12 @@ FUNC_BUILD_DTIMAGE_TARGET()
 				exynos7870-on7xelte_ltn_open_02 exynos7870-on7xelte_swa_open_00
 				exynos7870-on7xelte_swa_open_01 exynos7870-on7xelte_swa_open_02"
 		;;
+	j7xelte)
+		DTSFILES="exynos7870-j7xelte_eur_open_00 exynos7870-j7xelte_eur_open_01
+				exynos7870-j7xelte_eur_open_02 exynos7870-j7xelte_eur_open_03
+				exynos7870-j7xelte_eur_open_04 exynos7870-j7xelte_kor_03
+				exynos7870-j7xelte_kor_04"
+;;
 	*)
 		echo "Unknown device: $MODEL"
 		exit 1
@@ -179,46 +184,38 @@ FUNC_BUILD_RAMDISK()
 	mv $RDIR/arch/$ARCH/boot/Image $RDIR/arch/$ARCH/boot/boot.img-zImage
 	mv $RDIR/arch/$ARCH/boot/dtb.img $RDIR/arch/$ARCH/boot/boot.img-dtb
 
-	case $MODEL in
-	on7xelte)
-		rm -f $WD/tools/split_img/boot.img-zImage
-		rm -f $WD/tools/split_img/boot.img-dtb
-		mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $WD/tools/split_img/boot.img-zImage
-		mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $WD/tools/split_img/boot.img-dtb
+	rm -f $WD/tools/split_img/boot.img-zImage
+	rm -f $WD/tools/split_img/boot.img-dtb
+	mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $WD/tools/split_img/boot.img-zImage
+	mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $WD/tools/split_img/boot.img-dtb
 
-		if [ -d $WD/tools/ramdisk ]; then
-			rm -rf $WD/tools/ramdisk/*
-		else
-			mkdir $WD/tools/ramdisk
-		fi;
-
-		\cp -r $WD/G610F/ramdisk $WD/tools
-		\cp -r $WD/ramdisk/ramdisk $WD/tools
-		cd $WD/tools
-		cd ramdisk
-			chmod 644 file_contexts
-			chmod 644 se*
-			chmod 644 *.rc
-			chmod 750 init*
-			chmod 640 fstab*
-			chmod 644 default.prop
-			chmod 771 data
-			chmod 755 dev
-			chmod 755 proc
-			chmod 750 sbin
-			chmod 750 sbin/*
-			chmod 755 sys
-			chmod 755 system
-		cd ..
-		./repackimg.sh
-		echo SEANDROIDENFORCE >> image-new.img
+	if [ -d $WD/tools/ramdisk ]; then
 		rm -rf $WD/tools/ramdisk/*
-		;;
-	*)
-		echo "Unknown device: $MODEL"
-		exit 1
-		;;
-	esac
+	else
+		mkdir $WD/tools/ramdisk
+	fi;
+
+	\cp -r $WD/$RAMDISK/ramdisk $WD/tools
+	\cp -r $WD/ramdisk/ramdisk $WD/tools
+	cd $WD/tools
+	cd ramdisk
+		chmod 644 file_contexts
+		chmod 644 se*
+		chmod 644 *.rc
+		chmod 750 init*
+		chmod 640 fstab*
+		chmod 644 default.prop
+		chmod 771 data
+		chmod 755 dev
+		chmod 755 proc
+		chmod 750 sbin
+		chmod 750 sbin/*
+		chmod 755 sys
+		chmod 755 system
+	cd ..
+	./repackimg.sh
+	echo SEANDROIDENFORCE >> image-new.img
+	rm -rf $WD/tools/ramdisk/*
 }
 
 FUNC_BUILD_ZIP()
@@ -230,6 +227,8 @@ FUNC_BUILD_ZIP()
 	fi;
 
 # to generate new file name if exist.(add a digit to new one)
+	FILENAME=($NAME-$(date +"[%d-%m-%y]")-$MODEL);
+
 	ZIPFILE=$FILENAME
 	if [[ -e $RK/$ZIPFILE.zip ]] ; then
 			i=0
@@ -257,13 +256,22 @@ echo "----------------------"
 echo "Which kernel config ?!";
 echo "----------------------"
 echo -e "${restore}"
-select CHOICE in custom stock; do
+select CHOICE in custom stock j710; do
 	case "$CHOICE" in
 		"custom")
 			KERNEL_DEFCONFIG=gabriel_g610f_defconfig
+			MODEL=on7xelte
+			RAMDISK=G610F
 			break;;
 		"stock")
 			KERNEL_DEFCONFIG=on7xelteswa_00_defconfig
+			MODEL=on7xelte
+			RAMDISK=G610F
+			break;;
+		"j710")
+			KERNEL_DEFCONFIG=gabriel_j7xelte_defconfig
+			MODEL=j7xelte
+			RAMDISK=J710
 			break;;
 	esac;
 done;
