@@ -247,7 +247,7 @@ FUNC_BUILD_ZIP()
 	zip kernel.zip -r * > /dev/null
 	cd $RDIR
 
-	cp -v $WD/temp/kernel.zip $RK/$FILENAME.zip
+	cp $WD/temp/kernel.zip $RK/$FILENAME.zip
 	md5sum $RK/$FILENAME.zip > $RK/$FILENAME.zip.md5
 }
 
@@ -289,7 +289,8 @@ rm -rf ./build.log
 	DATE_END=$(date +"%s")
 
 	echo -e "${green}"
-	echo "-------------------"
+	echo "File Name is: "$FILENAME
+	echo -e "\n-------------------"
 	echo "Build Completed in:"
 	echo "-------------------"
 	echo -e "${restore}"
