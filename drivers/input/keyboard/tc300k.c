@@ -532,12 +532,12 @@ int tc300k_touchkey_led_control(bool on)
 	} else {
 		if (regulator_is_enabled(regulator))
 			ret = regulator_disable(regulator);
-			if (ret) {
-				pr_err("[TK] %s: regulator_led disable failed\n", __func__);
-				return ret;
-			}
-			else
-				regulator_force_disable(regulator);
+		if (ret) {
+			pr_err("[TK] %s: regulator_led disable failed\n", __func__);
+			return ret;
+		}
+		else
+			regulator_force_disable(regulator);
 		}
 	regulator_put(regulator);
 
