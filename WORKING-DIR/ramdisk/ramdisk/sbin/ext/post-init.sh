@@ -93,17 +93,31 @@ $BB chmod 444 /mp-cpufreq/cluster$i_freq_table
 done;
 
 #Governor Tuning
-for i in cpufreq_l cpufreq_b; do
-echo interactive > /$i/scaling_governor;
-sleep 0.5;
-echo 99 > /$i/interactive/go_hispeed_load; #default 89
-echo 902000 > /$i/interactive/hispeed_freq; #default 900000
-echo 40000 > /$i/interactive/min_sample_time; #default 40000
-echo "70 546000:60 676000:65 757000:70 839000:75 902000:80 1014000:85 1144000:90 1248000:95 1352000:100 1482000:110 1586000:200" > /$i/interactive/target_loads; #default 75 1248000:85
-echo 20000 > /$i/interactive/timer_rate; #default 20000
-echo 20000 > /$i/interactive/timer_slack; #default 20000
-$BB sync;
+C0=cpufreq_l
+C1=cpufreq_b
+G0=interactive
+G1=cultivation
+
+for i in $C0 $C1; do
+	for j in $G0 $G1; do
+		echo $j > /$i/scaling_governor;
+		sleep 0.5;
+		#defaults : interactive ,cultivation
+		echo 99 > /$i/$j/go_hispeed_load; #default 89 ,99
+		echo 902000 > /$i/$j/hispeed_freq; #default 900000 ,max_freq
+		echo 40000 > /$i/$j/min_sample_time; #default 40000 ,80000
+		echo "70 546000:60 676000:65 757000:70 839000:75 902000:80 1014000:85 1144000:90 1248000:95 1352000:100 1482000:110 1586000:200" > /$i/$j/target_loads; #default 75 1248000:85 ,90
+		echo 20000 > /$i/$j/timer_rate; #default 20000
+		echo 80000 > /$i/$j/timer_slack; #default 20000 ,80000
+		echo 50000 > /$i/$j/timer_rate_screenoff; #default x ,50000
+		echo 1 > /$i/$j/fastlane; #default x ,0
+		$BB sync;
+	done;
 done;
+
+#both cluster have cultivation
+echo $G1 > /$C0/scaling_governor;
+echo $G1 > /$C1/scaling_governor;
 
 echo 1 > /cpuhotplug/enable;
 }
