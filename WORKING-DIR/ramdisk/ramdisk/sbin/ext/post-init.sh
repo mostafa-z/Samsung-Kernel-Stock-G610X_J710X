@@ -106,11 +106,15 @@ for i in $C0 $C1; do
 		echo 99 > /$i/$j/go_hispeed_load; #default 89 ,99
 		echo 902000 > /$i/$j/hispeed_freq; #default 900000 ,max_freq
 		echo 40000 > /$i/$j/min_sample_time; #default 40000 ,80000
-		echo "70 546000:60 676000:65 757000:70 839000:75 902000:80 1014000:85 1144000:90 1248000:95 1352000:100 1482000:110 1586000:200" > /$i/$j/target_loads; #default 75 1248000:85 ,90
+		echo "70 546000:65 676000:70 757000:75 839000:80 902000:85 1014000:90 1144000:95 1248000:100 1352000:110 1482000:170 1586000:200" > /$i/$j/target_loads; #default 75 1248000:85 ,90
 		echo 20000 > /$i/$j/timer_rate; #default 20000
 		echo 80000 > /$i/$j/timer_slack; #default 20000 ,80000
 		echo 50000 > /$i/$j/timer_rate_screenoff; #default x ,50000
-		echo 1 > /$i/$j/fastlane; #default x ,0
+		echo 0 > /$i/$j/fastlane; #default x ,0
+		echo 0 > /$i/$j/above_hispeed_delay; #default x ,x
+		echo 1 > /$i/$j/align_windows; #default x ,0
+		echo 1 > /$i/$j/io_is_busy; #default 0 ,0
+		echo 100000 > /$i/$j/max_freq_hysteresis; #default x ,0
 		$BB sync;
 	done;
 done;
