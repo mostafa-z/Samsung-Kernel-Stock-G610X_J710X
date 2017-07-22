@@ -15,7 +15,7 @@
 
 menuconfig MALI_T83X
 	tristate "Mali-T83X support"
-	default n
+	default y
 	help
 	  Enable this option to build support for the ARM Mali-T83X GPU.
 	  To compile this driver as a module, choose M here:
@@ -24,16 +24,16 @@ menuconfig MALI_T83X
 choice
 	prompt "version Configuration"
 	depends on MALI_T83X
-	default MALI_R7P0_T83X
+	default MALI_R12P0
 	help
 	  Select the gpu support version.
 
-config MALI_R7P0_T83X
+config MALI_R12P0
 	depends on MALI_T83X
-	bool "r7p0 driver"
+	bool "r12p0 driver"
 
-if MALI_R7P0_T83X
-source "drivers/gpu/arm/t83x/r7p0/Kconfig"
+if MALI_R12P0
+source "drivers/gpu/arm/t83x/r12p0/Kconfig"
 endif
 
 endchoice
