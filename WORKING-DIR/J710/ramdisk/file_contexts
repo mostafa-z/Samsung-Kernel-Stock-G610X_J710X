@@ -2217,7 +2217,6 @@
 /data/misc/jack(/.*)?		u:object_r:jack_data_file:s0
 /data/misc/multimedia(/.*)?                           u:object_r:mediaserver_data_file:s0
 /data/misc/radio(/.*)?	u:object_r:radio_data_file:s0
-/data/misc/\.tiger(/.*)?		u:object_r:tiger_data_file:s0
 /data/misc/tima(/.*)?		u:object_r:tima_log:s0
 /data/misc/tima_keystore(/.*)?		u:object_r:tima_keystore_file:s0
 /data/misc/tz_esecomm(/.*)?		u:object_r:tima_keystore_file:s0

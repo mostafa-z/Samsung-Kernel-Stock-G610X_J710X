@@ -332,8 +332,6 @@ firewall                                    u:object_r:system_service:s0
 gamemanager                                 u:object_r:system_service:s0
 harmony_eas_service                         u:object_r:system_service:s0
 healthcover                                 u:object_r:system_service:s0
-# SEA_site M OS#137
-HqmManagerService                           u:object_r:system_service:s0
 iccc                                        u:object_r:system_service:s0
 moodlight                                   u:object_r:system_service:s0
 injection                                   u:object_r:system_service:s0

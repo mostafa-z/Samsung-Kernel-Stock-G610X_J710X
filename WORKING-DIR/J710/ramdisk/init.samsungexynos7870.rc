@@ -162,6 +162,12 @@ on boot
     chown bluetooth net_bt /sys/class/rfkill/rfkill0/type
     chown bluetooth net_bt /sys/class/rfkill/rfkill0/device/extldo
 
+# Fingerprint_sensor
+    chown system radio /sys/class/fingerprint/fingerprint/type_check
+    chown system radio /sys/class/fingerprint/fingerprint/name
+    chown system radio /sys/class/fingerprint/fingerprint/vendor
+    chown system radio /sys/class/fingerprint/fingerprint/adm
+
 # Sensors permissions
 # Accelerometer_sensor
     chown system radio /sys/class/sensors/accelerometer_sensor/raw_data
@@ -592,10 +598,7 @@ on fs
     chown system system /sys/class/ion_cma/ion_video_ext/isolated
 
 # Permissions for backlight
-    chmod 0660 /sys/class/backlight/panel/brightness
     chown system system /sys/class/backlight/panel/brightness
-    chown system system /sys/class/backlight/panel/auto_brightness
-    chown system system /sys/class/backlight/panel/weakness_hbm_comp
 
 # Permissions for LCD
     chown system radio /sys/class/lcd/panel/manufacture_code
@@ -603,6 +606,12 @@ on fs
     chown system system /sys/class/lcd/panel/siop_enable
     chown system system /sys/class/lcd/panel/temperature
     chown system radio /sys/class/lcd/panel/power_reduce
+    chown system system /sys/class/lcd/panel/lux
+    chown system media_rw /sys/class/lcd/panel/adaptive_control
+    chown system system /sys/class/lcd/panel/alpm
+    chown system system /sys/class/lcd/panel/dpui
+    chown system system /sys/class/lcd/panel/dpui_dbg
+    chown system system /sys/devices/svc/OCTA/SVC_OCTA
 
 # Permissions for MDNIE
     chown system media_rw /sys/class/mdnie/mdnie/mode
@@ -610,6 +619,9 @@ on fs
     chown system system /sys/class/mdnie/mdnie/accessibility
     chown system system /sys/class/mdnie/mdnie/auto_brightness
     chown system system /sys/class/mdnie/mdnie/sensorRGB
+    chown system system /sys/class/mdnie/mdnie/mdnie_ldu
+    chown system system /sys/class/mdnie/mdnie/night_mode
+    chown system system /sys/class/mdnie/mdnie/whiteRGB
 
 # For cpefs partition
     check_fs /dev/block/platform/13540000.dwmmc0/by-name/CPEFS ext4
@@ -642,6 +654,7 @@ on fs
     chown media system /sys/class/camera/flash/rear_torch_flash
     chmod 0660 /sys/class/camera/flash/front_torch_flash
     chown media system /sys/class/camera/flash/front_torch_flash
+
 # Permissions for TouchScreen
     chown system radio /sys/class/sec/tsp/cmd
     chown system system /sys/class/sec/tsp/input/enabled
@@ -653,6 +666,11 @@ on fs
     chown system radio /sys/class/sec/sec_touchkey/glove_mode
     chown system radio /sys/class/sec/sec_touchkey/flip_mode
     chown system system /sys/class/sec/sec_touchkey/input/enabled
+
+# Permissions for input_booster
+    chown system radio /sys/class/input_booster/level
+    chown system radio /sys/class/input_booster/head
+    chown system radio /sys/class/input_booster/tail
 
 # Permissions for gpio_keys
     chown radio system /sys/class/sec/sec_key/wakeup_keys
@@ -674,6 +692,7 @@ on fs
     chown system radio /sys/class/camera/rear/from_write
     chown system radio /sys/class/camera/rear/isp_core
     chown system radio /sys/class/camera/rear/fw_update
+    chown system radio /sys/class/camera/rear/rear_moduleid
     chown system radio /sys/class/camera/flash/rear_flash
     chown system radio /sys/class/camera/flash/front_flash
     chown media system /sys/class/camera/flash/torch_flash
@@ -715,6 +734,14 @@ on property:ro.bootmode=charger
 on property:ro.bootmode=charger
    class_start sec-charger
 
+# SecEDS
+service TvoutService_C /system/bin/bintvoutservice
+     class main
+     user system
+     group graphics
+on property:ro.SecEDS.enable=false
+    stop TvoutService_C
+
 # Bluetooth
 on property:wc_transport.start_hci=true
     start start_hci_filter
@@ -724,7 +751,7 @@ on property:wc_transport.start_hci=false
 
 service start_hci_filter /system/bin/wcnss_filter
     class late_start
-    user root
+    user bluetooth
     group bluetooth qcom_diag
     disabled
 
@@ -845,3 +872,11 @@ service swapon /sbin/sswap -s
     group root
     seclabel u:r:sswap:s0
     oneshot
+
+# IMS stack for IMS
+service imsd /system/bin/imsd
+    class main
+    socket imsd stream 0660 system system
+    socket sme_socket stream 0660 system system
+    user root
+    group system radio net_raw inet net_admin

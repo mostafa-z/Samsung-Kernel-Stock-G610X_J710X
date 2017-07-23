@@ -602,12 +602,27 @@ on fs
     chown system system /sys/class/backlight/panel/brightness
 
 # Permissions for LCD
+    chown system radio /sys/class/lcd/panel/manufacture_code
     chown system radio /sys/class/lcd/panel/lcd_type
+    chown system system /sys/class/lcd/panel/siop_enable
+    chown system system /sys/class/lcd/panel/temperature
+    chown system radio /sys/class/lcd/panel/power_reduce
     chown system system /sys/class/lcd/panel/lux
+    chown system media_rw /sys/class/lcd/panel/adaptive_control
+    chown system system /sys/class/lcd/panel/alpm
+    chown system system /sys/class/lcd/panel/dpui
+    chown system system /sys/class/lcd/panel/dpui_dbg
+    chown system system /sys/devices/svc/OCTA/SVC_OCTA
 
 # Permissions for MDNIE
     chown system media_rw /sys/class/mdnie/mdnie/mode
     chown system media_rw /sys/class/mdnie/mdnie/scenario
+    chown system system /sys/class/mdnie/mdnie/accessibility
+    chown system system /sys/class/mdnie/mdnie/auto_brightness
+    chown system system /sys/class/mdnie/mdnie/sensorRGB
+    chown system system /sys/class/mdnie/mdnie/mdnie_ldu
+    chown system system /sys/class/mdnie/mdnie/night_mode
+    chown system system /sys/class/mdnie/mdnie/whiteRGB
 
 # For cpefs partition
     check_fs /dev/block/platform/13540000.dwmmc0/by-name/CPEFS ext4
@@ -627,15 +642,6 @@ on fs
     chmod 0755 /persdata
     chown system system /persdata/absolute
     chmod 0750 /persdata/absolute
-
-#for f2fs cache
-    wait /dev/block/platform/13540000.dwmmc0/by-name/CACHE
-    wait /dev/block/platform/13540000.dwmmc0/by-name/CACHE
-    wait /dev/block/platform/13540000.dwmmc0/by-name/CACHE
-    #mount ext4 /dev/block/platform/13540000.dwmmc0/by-name/CACHE /cache nodev data=journal barrier=1
-	# Auto mount cache for f2fs
-	chmod 0777 sbin/fstab_mount/cache.sh
-	exec sbin/fstab_mount/cache.sh
 
 # Copy DRM Key
     copy /system/app/wv.keys /factory/wv.keys
@@ -727,7 +733,6 @@ service argos-daemon /system/bin/argosd
 # LPM
 on property:ro.bootmode=charger
    mount ext4 /dev/block/platform/13540000.dwmmc0/by-name/SYSTEM /system wait rw
-   mount f2fs /dev/block/platform/13540000.dwmmc0/by-name/SYSTEM /system wait ro
 
 on property:ro.bootmode=charger
     wait /dev/block/platform/13540000.dwmmc0/by-name/EFS
@@ -769,6 +774,12 @@ service fingerprintd /system/bin/fingerprintd
     class late_start
     user system
     group system
+
+# RPMB daemon
+service rpmbd /system/bin/rpmbd
+     user root
+     group drmrpc
+     class main
 
 on property:sys.mobicoredaemon.enable=true
     start cs_service
@@ -869,20 +880,20 @@ on property:persist.sys.storage_preload=0
     start umount_service
 
 # SSWAP
-#service swapon /sbin/sswap -s
-#    class core
-#    user root
-#    group root
-#    seclabel u:r:sswap:s0
-#    oneshot
+service swapon /sbin/sswap -s
+    class core
+    user root
+    group root
+    seclabel u:r:sswap:s0
+    oneshot
 
 # SSWAP
-#service swapon /sbin/sswap -s -f 1536
-#    class core
-#    user root
-#    group root
-#    seclabel u:r:sswap:s0
-#    oneshot
+service swapon /sbin/sswap -s -f 1536
+    class core
+    user root
+    group root
+    seclabel u:r:sswap:s0
+    oneshot
 
 # IMS stack for IMS
 service imsd /system/bin/imsd

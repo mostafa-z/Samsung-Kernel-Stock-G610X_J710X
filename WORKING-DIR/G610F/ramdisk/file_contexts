@@ -129,7 +129,6 @@
 # System files
 #
 /system(/.*)?		u:object_r:system_file:s0
-/system/bin/mkfs.f2fs   u:object_r:system_file:s0
 /system/bin/e2fsck	--	u:object_r:fsck_exec:s0
 /system/bin/fsck\.f2fs	--	u:object_r:fsck_exec:s0
 /system/bin/fsck_msdos	--	u:object_r:fsck_exec:s0
@@ -163,7 +162,6 @@
 /system/bin/pppd	u:object_r:ppp_exec:s0
 /system/bin/tf_daemon	u:object_r:tee_exec:s0
 /system/bin/racoon	u:object_r:racoon_exec:s0
-/system/xbin(/.*)?      u:object_r:system_file:s0
 /system/xbin/su		u:object_r:su_exec:s0
 /system/xbin/procrank   u:object_r:procrank_exec:s0
 /system/xbin/perfprofd  u:object_r:perfprofd_exec:s0
@@ -2219,7 +2217,6 @@
 /data/misc/jack(/.*)?		u:object_r:jack_data_file:s0
 /data/misc/multimedia(/.*)?                           u:object_r:mediaserver_data_file:s0
 /data/misc/radio(/.*)?	u:object_r:radio_data_file:s0
-/data/misc/\.tiger(/.*)?		u:object_r:tiger_data_file:s0
 /data/misc/tima(/.*)?		u:object_r:tima_log:s0
 /data/misc/tima_keystore(/.*)?		u:object_r:tima_keystore_file:s0
 /data/misc/tz_esecomm(/.*)?		u:object_r:tima_keystore_file:s0
