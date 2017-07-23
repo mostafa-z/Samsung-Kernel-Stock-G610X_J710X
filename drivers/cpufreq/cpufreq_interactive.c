@@ -52,6 +52,11 @@ struct cpufreq_interactive_cpuinfo {
 	u64 time_in_idle_timestamp;
 	u64 cputime_speedadj;
 	u64 cputime_speedadj_timestamp;
+#ifdef CONFIG_LOAD_BASED_CORE_CURRENT_CAL
+	unsigned int pre_cpu_for_load;
+	u64 curr_speed_total_time;
+	u64 curr_speed_idle_time;
+#endif
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *freq_table;
 	spinlock_t target_freq_lock; /*protects target freq */
@@ -347,6 +352,16 @@ static u64 update_load(int cpu)
 	else
 		active_time = delta_time - delta_idle;
 
+#ifdef CONFIG_LOAD_BASED_CORE_CURRENT_CAL
+	if(pcpu->pre_cpu_for_load == pcpu->policy->cur) {
+		pcpu->curr_speed_total_time += delta_time;
+		pcpu->curr_speed_idle_time += delta_idle;
+	} else {
+		pcpu->curr_speed_total_time = delta_time;
+		pcpu->curr_speed_idle_time = delta_idle;
+	}
+	pcpu->pre_cpu_for_load = pcpu->policy->cur;
+#endif
 	pcpu->cputime_speedadj += active_time * pcpu->policy->cur;
 
 #if defined(CONFIG_CPU_THERMAL_IPA) || defined(CONFIG_EXYNOS_HOTPLUG_GOVERNOR)
@@ -357,6 +372,23 @@ static u64 update_load(int cpu)
 	pcpu->time_in_idle_timestamp = now;
 	return now;
 }
+
+#ifdef CONFIG_LOAD_BASED_CORE_CURRENT_CAL
+ unsigned int get_cpu_load(int cpu)
+{
+	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
+	unsigned int active_time, total_time;
+
+	if((pcpu == NULL) || (pcpu->curr_speed_total_time == 0) 
+			||(pcpu->curr_speed_idle_time > pcpu->curr_speed_total_time)) {
+		return 0;
+	}
+
+	active_time = (unsigned int)(pcpu->curr_speed_total_time - pcpu->curr_speed_idle_time);
+	total_time = (unsigned int)(pcpu->curr_speed_total_time);
+	return (active_time*100) / total_time; 
+}
+#endif
 
 static void cpufreq_interactive_timer(unsigned long data)
 {
@@ -1607,6 +1639,11 @@ static int __init cpufreq_interactive_init(void)
 		spin_lock_init(&pcpu->load_lock);
 		spin_lock_init(&pcpu->target_freq_lock);
 		init_rwsem(&pcpu->enable_sem);
+#ifdef CONFIG_LOAD_BASED_CORE_CURRENT_CAL
+		pcpu->pre_cpu_for_load = 0;
+		pcpu->curr_speed_total_time = 0;
+		pcpu->curr_speed_idle_time = 0;
+#endif
 	}
 
 	spin_lock_init(&speedchange_cpumask_lock);
