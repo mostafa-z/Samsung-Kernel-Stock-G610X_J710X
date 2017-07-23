@@ -16,8 +16,8 @@
  * 02110-1301 USA
  */
 
-#ifndef _ET510_LINUX_DIRVER_H_
-#define _ET510_LINUX_DIRVER_H_
+#ifndef _ET5XX_LINUX_DIRVER_H_
+#define _ET5XX_LINUX_DIRVER_H_
 
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 #define FEATURE_SPI_WAKELOCK
@@ -52,19 +52,19 @@ struct sec_spi_info {
 };
 #endif
 
-/*#define ET510_SPI_DEBUG*/
+/*#define ET5XX_SPI_DEBUG*/
 
-#ifdef ET510_SPI_DEBUG
+#ifdef ET5XX_SPI_DEBUG
 #define DEBUG_PRINT(fmt, args...) pr_err(fmt, ## args)
 #else
 #define DEBUG_PRINT(fmt, args...)
 #endif
 
 #define VENDOR						"EGISTEC"
-#define CHIP_ID						"ET510"
+#define CHIP_ID						"ET5XX"
 
 /* assigned */
-#define ET510_MAJOR					153
+#define ET5XX_MAJOR					153
 /* ... up to 256 */
 #define N_SPI_MINORS					32
 
@@ -89,8 +89,8 @@ struct sec_spi_info {
 #define DRDY_IRQ_ENABLE					1
 #define DRDY_IRQ_DISABLE				0
 
-#define ET510_INT_DETECTION_PERIOD			10
-#define ET510_DETECTION_THRESHOLD			10
+#define ET5XX_INT_DETECTION_PERIOD			10
+#define ET5XX_DETECTION_THRESHOLD			10
 
 #define FP_REGISTER_READ				0x01
 #define FP_REGISTER_WRITE				0x02
@@ -120,7 +120,7 @@ struct sec_spi_info {
 #define FP_SET_LOCKSCREEN				0x16
 #define FP_SET_WAKE_UP_SIGNAL				0x17
 #endif
-#define FP_POWER_CONTROL_ET510				0x18
+#define FP_POWER_CONTROL_ET5XX				0x18
 #define FP_IOCTL_RESERVED_01				0x19
 
 /* trigger signal initial routine */
@@ -134,8 +134,8 @@ struct sec_spi_info {
 /* polling abort */
 #define INT_TRIGGER_ABORT				0xa8
 /* Sensor Registers */
-#define FDATA_ET510_ADDR				0x00
-#define FSTATUS_ET510_ADDR				0x01
+#define FDATA_ET5XX_ADDR				0x00
+#define FSTATUS_ET5XX_ADDR				0x01
 /* Detect Define */
 #define FRAME_READY_MASK				0x01
 
@@ -234,6 +234,7 @@ struct etspi_data {
 	int detect_period;
 	int detect_threshold;
 	bool finger_on;
+	const char *chipid;
 };
 
 int etspi_io_burst_read_register(struct etspi_data *etspi,

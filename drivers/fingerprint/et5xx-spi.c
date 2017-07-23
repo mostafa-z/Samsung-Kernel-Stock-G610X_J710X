@@ -17,7 +17,7 @@
  */
 
 #include "fingerprint.h"
-#include "et510.h"
+#include "et5xx.h"
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -666,7 +666,7 @@ static long etspi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 
 	case FP_POWER_CONTROL:
-	case FP_POWER_CONTROL_ET510:
+	case FP_POWER_CONTROL_ET5XX:
 		pr_info("%s FP_POWER_CONTROL, status = %d\n", __func__, ioc->len);
 		etspi_power_control(etspi, ioc->len);
 		break;
@@ -1063,8 +1063,14 @@ static int etspi_parse_dt(struct device *dev,
 		pr_info("%s: ldo_pin=%d\n",
 			__func__, data->ldo_pin);
 	}
-#ifndef ENABLE_SENSORS_FPRINT_SECURE
 
+	if (of_property_read_string_index(np, "etspi-chipid", 0,
+			(const char**)&data->chipid)) {
+		data->chipid = NULL;
+	}
+	pr_info("%s: chipid: %s\n", __func__, data->chipid);
+
+#ifndef ENABLE_SENSORS_FPRINT_SECURE
 	if (of_property_read_u32(np, "etspi-ldocontrol",
 			&data->ldocontrol))
 			data->ldocontrol = 0;
@@ -1120,35 +1126,58 @@ static const struct file_operations etspi_fops = {
 #ifndef ENABLE_SENSORS_FPRINT_SECURE
 static int etspi_type_check(struct etspi_data *etspi)
 {
-	u8 buf1, buf2, buf3, buf4;
+	u8 buf1, buf2, buf3, buf4, buf5, buf6, buf7;
 
 	etspi_power_control(g_data, 1);
 
 	mdelay(20);
 
-	etspi_read_register(etspi, 0x20, &buf1);
-	etspi_read_register(etspi, 0x21, &buf2);
-	etspi_read_register(etspi, 0x23, &buf3);
-	etspi_read_register(etspi, 0x24, &buf4);
+	etspi_read_register(etspi, 0x00, &buf1);
+	if (buf1 != 0xAA) {
+		etspi->sensortype = SENSOR_FAILED;
+		pr_info("%s sensor not ready, status = %x\n", __func__, buf1);
+		etspi_power_control(g_data, 0);
+		return -1;
+	}
+
+	etspi_read_register(etspi, 0xFD, &buf1);
+	etspi_read_register(etspi, 0xFE, &buf2);
+	etspi_read_register(etspi, 0xFF, &buf3);
+
+	etspi_read_register(etspi, 0x20, &buf4);
+	etspi_read_register(etspi, 0x21, &buf5);
+	etspi_read_register(etspi, 0x23, &buf6);
+	etspi_read_register(etspi, 0x24, &buf7);
 
 	etspi_power_control(g_data, 0);
 
-	pr_info("%s buf1: %x, buf2: %x, buf3: %x, buf4: %x\n",
-				__func__, buf1, buf2, buf3, buf4);
+	pr_info("%s buf1-7: %x, %x, %x, %x, %x, %x, %x\n", 
+		__func__, buf1, buf2, buf3, buf4, buf5, buf6, buf7);
 
 	/*
 	 * type check return value
-	 * ET510 : 00 / 66 / 00 / 33
+	 * ET510C : 0X00 / 0X66 / 0X00 / 0X33
+	 * ET510D : 0x03 / 0x0A / 0x05
+	 * ET516A : 0x00 / 0x10 / 0x05
 	 */
-	if ((buf1 == 0x00) && (buf2 == 0x66)
-				&& (buf3 == 0x00) && (buf4 == 0x33)) {
+	if ((buf1 == 0x00) && (buf2 == 0x10) && (buf3 == 0x05)) {
 		etspi->sensortype = SENSOR_EGIS;
-		pr_info("%s sensor type is EGIS ET510 sensor\n", __func__);
+		pr_info("%s sensor type is EGIS ET516A sensor\n", __func__);
+		return 0;
+	} else  if ((buf1 == 0x03) && (buf2 == 0x0A) && (buf3 == 0x05)) {
+		etspi->sensortype = SENSOR_EGIS;
+		pr_info("%s sensor type is EGIS ET510D sensor\n", __func__);
 		return 0;
 	} else {
-		etspi->sensortype = SENSOR_FAILED;
-		pr_info("%s sensor type is FAILED\n", __func__);
-		return -1;
+		if ((buf4 == 0x00) && (buf5 == 0x66) && (buf6 == 0x00) && (buf7 == 0x33)) {
+			etspi->sensortype = SENSOR_EGIS;
+			pr_info("%s sensor type is EGIS ET510C sensor\n", __func__);
+			return 0;
+		} else {
+			etspi->sensortype = SENSOR_FAILED;
+			pr_info("%s  type is FAILED\n", __func__);
+			return -1;
+		}
 	}
 }
 #endif
@@ -1170,7 +1199,7 @@ static ssize_t etspi_vendor_show(struct device *dev,
 static ssize_t etspi_name_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%s\n", CHIP_ID);
+	return snprintf(buf, PAGE_SIZE, "%s\n", g_data->chipid);
 }
 
 static ssize_t etspi_adm_show(struct device *dev,
@@ -1178,28 +1207,6 @@ static ssize_t etspi_adm_show(struct device *dev,
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", DETECT_ADM);
 }
-#ifndef ENABLE_SENSORS_FPRINT_SECURE
-static ssize_t etspi_sysfs_power_on_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	if(g_data->ldocontrol){
-		etspi_power_control(g_data, 1);
-	}
-	return snprintf(buf, PAGE_SIZE, "0\n");
-}
-static ssize_t etspi_sysfs_power_off_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	if(g_data->ldocontrol){
-		etspi_power_control(g_data, 0);
-	}
-	return snprintf(buf, PAGE_SIZE, "0\n");
-}
-static DEVICE_ATTR(sysfs_power_on, S_IRUGO,
-	etspi_sysfs_power_on_show, NULL);
-static DEVICE_ATTR(sysfs_power_off, S_IRUGO,
-	etspi_sysfs_power_off_show, NULL);
-#endif
 
 static DEVICE_ATTR(type_check, S_IRUGO,
 	etspi_type_check_show, NULL);
@@ -1215,10 +1222,6 @@ static struct device_attribute *fp_attrs[] = {
 	&dev_attr_vendor,
 	&dev_attr_name,
 	&dev_attr_adm,
-#ifndef ENABLE_SENSORS_FPRINT_SECURE
-	&dev_attr_sysfs_power_on,
-	&dev_attr_sysfs_power_off,
-#endif
 	NULL,
 };
 #endif
@@ -1408,7 +1411,7 @@ static int etspi_probe(struct spi_device *spi)
 	minor = find_first_zero_bit(minors, N_SPI_MINORS);
 	if (minor < N_SPI_MINORS) {
 		struct device *dev;
-		etspi->devt = MKDEV(ET510_MAJOR, minor);
+		etspi->devt = MKDEV(ET5XX_MAJOR, minor);
 		dev = device_create(etspi_class, &spi->dev, etspi->devt,
 				    etspi, "esfp0");
 		status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
@@ -1542,7 +1545,7 @@ static const struct dev_pm_ops etspi_pm_ops = {
 };
 
 static struct of_device_id etspi_match_table[] = {
-	{ .compatible = "etspi,et510",},
+	{ .compatible = "etspi,et5xx",},
 	{},
 };
 
@@ -1578,7 +1581,7 @@ static int __init etspi_init(void)
 	 * the driver which manages those device numbers.
 	 */
 	BUILD_BUG_ON(N_SPI_MINORS > 256);
-	status = register_chrdev(ET510_MAJOR, "egis_fingerprint", &etspi_fops);
+	status = register_chrdev(ET5XX_MAJOR, "egis_fingerprint", &etspi_fops);
 	if (status < 0) {
 		pr_err("%s register_chrdev error.\n", __func__);
 		return status;
@@ -1587,7 +1590,7 @@ static int __init etspi_init(void)
 	etspi_class = class_create(THIS_MODULE, "egis_fingerprint");
 	if (IS_ERR(etspi_class)) {
 		pr_err("%s class_create error.\n", __func__);
-		unregister_chrdev(ET510_MAJOR, etspi_spi_driver.driver.name);
+		unregister_chrdev(ET5XX_MAJOR, etspi_spi_driver.driver.name);
 		return PTR_ERR(etspi_class);
 	}
 
@@ -1595,7 +1598,7 @@ static int __init etspi_init(void)
 	if (status < 0) {
 		pr_err("%s spi_register_driver error.\n", __func__);
 		class_destroy(etspi_class);
-		unregister_chrdev(ET510_MAJOR, etspi_spi_driver.driver.name);
+		unregister_chrdev(ET5XX_MAJOR, etspi_spi_driver.driver.name);
 		return status;
 	}
 
@@ -1610,13 +1613,13 @@ static void __exit etspi_exit(void)
 
 	spi_unregister_driver(&etspi_spi_driver);
 	class_destroy(etspi_class);
-	unregister_chrdev(ET510_MAJOR, etspi_spi_driver.driver.name);
+	unregister_chrdev(ET5XX_MAJOR, etspi_spi_driver.driver.name);
 }
 
 module_init(etspi_init);
 module_exit(etspi_exit);
 
 MODULE_AUTHOR("Wang YuWei, <robert.wang@egistec.com>");
-MODULE_DESCRIPTION("SPI Interface for ET510");
+MODULE_DESCRIPTION("SPI Interface for ET5XX");
 MODULE_LICENSE("GPL");
 
