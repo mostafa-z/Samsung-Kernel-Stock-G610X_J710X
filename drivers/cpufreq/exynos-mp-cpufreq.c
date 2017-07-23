@@ -1015,6 +1015,40 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct attribute *a
 
 	return count;
 }
+
+#ifdef CONFIG_SW_SELF_DISCHARGING
+static ssize_t show_cpufreq_self_discharging(struct kobject *kobj,
+			     struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", self_discharging);
+}
+
+static ssize_t store_cpufreq_self_discharging(struct kobject *kobj, struct attribute *attr,
+			      const char *buf, size_t count)
+{
+	int input;
+	int i;
+
+	if (!sscanf(buf, "%d", &input))
+		return -EINVAL;
+
+	if (input > 0) {
+		self_discharging = input;
+		cpu_idle_poll_ctrl(true);
+	}
+	else {
+		self_discharging = 0;
+		cpu_idle_poll_ctrl(false);
+	}
+
+	for (i = 0; i < CL_END; i++) {
+		pm_qos_update_request(&core_min_qos[i], self_discharging);
+	}
+
+	return count;
+}
+#endif	/* CONFIG_SW_SELF_DISCHARGING */
+
 #else
 static ssize_t show_cpufreq_table(struct kobject *kobj, struct attribute *attr,
 		char *buf)
