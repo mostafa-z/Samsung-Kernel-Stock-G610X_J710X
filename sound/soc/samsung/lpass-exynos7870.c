@@ -360,6 +360,40 @@ void lpass_put_sync(struct device *ip_dev)
 	lpass_update_qos();
 }
 
+#ifdef USE_EXYNOS_AUD_SCHED
+void lpass_set_sched(pid_t pid, int mode)
+{
+#ifdef USE_AUD_TASK_RT
+	struct sched_param param_fifo = {.sched_priority = MAX_RT_PRIO >> 1};
+	struct task_struct *task = find_task_by_vpid(pid);
+#endif
+	switch (mode) {
+	case AUD_MODE_UHQA:
+		lpass.uhqa_on = true;
+		break;
+	case AUD_MODE_NORM:
+		lpass.uhqa_on = false;
+		break;
+	default:
+		break;
+	}
+
+	lpass_update_qos();
+
+#ifdef USE_AUD_TASK_RT
+	if (task) {
+		sched_setscheduler_nocheck(task,
+				SCHED_RR | SCHED_RESET_ON_FORK, &param_fifo);
+		pr_info("%s: [%s] pid = %d, prio = %d\n",
+				__func__, task->comm, pid, task->prio);
+	} else {
+		pr_err("%s: task not found (pid = %d)\n",
+				__func__, pid);
+	}
+#endif
+}
+#endif
+
 void lpass_add_stream(void)
 {
 	atomic_inc(&lpass.stream_cnt);
