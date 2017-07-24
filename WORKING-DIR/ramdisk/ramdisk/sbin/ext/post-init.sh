@@ -86,42 +86,51 @@ $BB chmod 444 /sys/devices/system/cpu/$i/cpufreq/cpuinfo_cur_freq
 $BB chmod 444 /sys/devices/system/cpu/$i/cpufreq/stats/*
 done;
 
-for i in 0 1; do
-$BB chmod 666 /mp-cpufreq/cluster$i_max_freq
-$BB chmod 666 /mp-cpufreq/cluster$i_min_freq
-$BB chmod 444 /mp-cpufreq/cluster$i_freq_table
-done;
+$BB chmod 666 /mp-cpufreq/cluster0_max_freq
+$BB chmod 666 /mp-cpufreq/cluster0_min_freq
+$BB chmod 444 /mp-cpufreq/cluster0_freq_table
+$BB chmod 666 /mp-cpufreq/cluster1_max_freq
+$BB chmod 666 /mp-cpufreq/cluster1_min_freq
+$BB chmod 444 /mp-cpufreq/cluster1_freq_table
 
 #Governor Tuning
 C0=cpufreq_l
 C1=cpufreq_b
-G0=interactive
+G0=cultivation
 G1=cultivation
 
-for i in $C0 $C1; do
-	for j in $G0 $G1; do
-		echo $j > /$i/scaling_governor;
-		sleep 0.5;
 		#defaults : interactive ,cultivation
-		echo 99 > /$i/$j/go_hispeed_load; #default 89 ,99
-		echo 902000 > /$i/$j/hispeed_freq; #default 900000 ,max_freq
-		echo 40000 > /$i/$j/min_sample_time; #default 40000 ,80000
-		echo "70 546000:65 676000:70 757000:75 839000:80 902000:85 1014000:90 1144000:95 1248000:100 1352000:110 1482000:170 1586000:200" > /$i/$j/target_loads; #default 75 1248000:85 ,90
-		echo 20000 > /$i/$j/timer_rate; #default 20000
-		echo 80000 > /$i/$j/timer_slack; #default 20000 ,80000
-		echo 50000 > /$i/$j/timer_rate_screenoff; #default x ,50000
-		echo 0 > /$i/$j/fastlane; #default x ,0
-		echo 0 > /$i/$j/above_hispeed_delay; #default x ,x
-		echo 1 > /$i/$j/align_windows; #default x ,0
-		echo 1 > /$i/$j/io_is_busy; #default 0 ,0
-		echo 100000 > /$i/$j/max_freq_hysteresis; #default x ,0
-		$BB sync;
-	done;
-done;
+		echo $G0 > /$C0/scaling_governor;
+		echo $G1 > /$C1/scaling_governor;
+		sleep 0.5;
 
-#both cluster have cultivation
-echo $G1 > /$C0/scaling_governor;
-echo $G1 > /$C1/scaling_governor;
+		# Little cluster
+		echo "45 546000:50 676000:55 757000:60 839000:65 902000:70 1014000:75 1144000:80 1248000:85 1352000:90 1482000:95 1586000:100" > /$C0/$G0/target_loads; #default 75 1248000:85 ,90
+		echo 20000 > /$C0/$G0/timer_rate; #default 20000
+		echo 0 > /$C0/$G0/above_hispeed_delay; #default x ,x
+		echo 100 > /$C0/$G0/go_hispeed_load; #default 89 ,99
+		echo 0 > /$C0/$G0/hispeed_freq; #default 900000 ,max_freq
+		echo 60000 > /$C0/$G0/min_sample_time; #default 40000 ,80000
+		echo 80000 > /$C0/$G0/max_freq_hysteresis; #default x ,0
+		echo 30000 > /$C0/$G0/timer_slack; #default 20000 ,80000
+		echo 50000 > /$C0/$G0/timer_rate_screenoff; #default x ,50000
+		echo 1 > /$C0/$G0/fastlane; #default x ,0
+		echo 0 > /$C0/$G0/align_windows; #default x ,0
+		echo 0 > /$C0/$G0/io_is_busy; #default 0 ,0
+
+		# big cluster
+		echo "90 1248000:95" > /$C1/$G1/target_loads; #default 75 1248000:85 ,90
+		echo 30000 > /$C1/$G1/timer_rate; #default 20000
+		echo "20000 902000:40000 1248000:20000" > /$C1/$G1/above_hispeed_delay; #default x ,x
+		echo 90 > /$C1/$G1/go_hispeed_load; #default 89 ,99
+		echo 902000 > /$C1/$G1/hispeed_freq; #default 900000 ,max_freq
+		echo 20000 > /$C1/$G1/min_sample_time; #default 40000 ,80000
+		echo 80000 > /$C1/$G1/max_freq_hysteresis; #default x ,0
+		echo 30000 > /$C1/$G1/timer_slack; #default 20000 ,80000
+		echo 50000 > /$C1/$G1/timer_rate_screenoff; #default x ,50000
+		echo 1 > /$C1/$G1/fastlane; #default x ,0
+		echo 0 > /$C1/$G1/align_windows; #default x ,0
+		echo 0 > /$C1/$G1/io_is_busy; #default 0 ,0
 
 echo 1 > /cpuhotplug/enable;
 }
