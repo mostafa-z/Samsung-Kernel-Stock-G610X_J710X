@@ -97,7 +97,7 @@ $BB chmod 444 /mp-cpufreq/cluster1_freq_table
 C0=cpufreq_l
 C1=cpufreq_b
 G0=cultivation
-G1=cultivation
+G1=interactive
 
 		#defaults : interactive ,cultivation
 		echo $G0 > /$C0/scaling_governor;
