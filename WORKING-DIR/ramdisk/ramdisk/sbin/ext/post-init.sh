@@ -114,7 +114,7 @@ G1=cultivation
 		echo 80000 > /$C0/$G0/max_freq_hysteresis; #default x ,0
 		echo 30000 > /$C0/$G0/timer_slack; #default 20000 ,80000
 		echo 50000 > /$C0/$G0/timer_rate_screenoff; #default x ,50000
-		echo 1 > /$C0/$G0/fastlane; #default x ,0
+		echo 0 > /$C0/$G0/fastlane; #default x ,0
 		echo 0 > /$C0/$G0/align_windows; #default x ,0
 		echo 0 > /$C0/$G0/io_is_busy; #default 0 ,0
 
