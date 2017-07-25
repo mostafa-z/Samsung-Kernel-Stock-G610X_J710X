@@ -384,6 +384,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	chipcregs_t *cc;
 	char *pvars = NULL;
 	uint origidx;
+	int bus_type;
 #if !defined(_CFEZ_) || defined(CFG_WL)
 #endif 
 
@@ -422,7 +423,8 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	}
 
 	sih->bustype = bustype;
-	if (bustype != BUSTYPE(bustype)) {
+	bus_type = bustype;
+	if (bustype != BUSTYPE(bus_type)) {
 		SI_ERROR(("si_doattach: bus type %d does not match configured bus type %d\n",
 			bustype, BUSTYPE(bustype)));
 		return NULL;

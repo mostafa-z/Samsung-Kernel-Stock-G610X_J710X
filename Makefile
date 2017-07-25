@@ -411,8 +411,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -mtune=cortex-a53 \
 		   -std=gnu89 -Wno-discarded-array-qualifiers \
 		   -Wno-switch-unreachable -Wno-logical-not-parentheses \
-		   -Wno-tautological-compare -Wno-array-bounds \
-		   -Wno-nonnull
+		   -Wno-array-bounds -Wno-nonnull
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
