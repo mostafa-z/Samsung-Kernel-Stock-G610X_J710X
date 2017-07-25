@@ -410,7 +410,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror \
 		   -mtune=cortex-a53 \
 		   -std=gnu89 \
-		   -Wno-switch-unreachable -Wno-logical-not-parentheses
+		   -Wno-switch-unreachable
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
