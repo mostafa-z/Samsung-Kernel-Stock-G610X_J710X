@@ -409,7 +409,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -Werror \
 		   -mtune=cortex-a53 \
-		   -std=gnu89 -Wno-format-truncation -Wno-discarded-array-qualifiers \
+		   -std=gnu89 -Wno-discarded-array-qualifiers \
 		   -Wno-switch-unreachable -Wno-bool-operation -Wno-logical-not-parentheses \
 		   -Wno-format-overflow -Wno-tautological-compare
 
@@ -635,6 +635,15 @@ endif
 KBUILD_CFLAGS 	+= $(call cc-disable-warning,maybe-uninitialized,) \
 		   $(call cc-disable-warning,unused-variable,) \
 		   $(call cc-disable-warning,unused-function)
+
+# Disable unused-constant-variable warnings
+KBUILD_CFLAGS	+= $(call cc-disable-warning,unused-const-variable,)
+
+# Disable format-truncation warnings
+KBUILD_CFLAGS   += $(call cc-disable-warning,format-truncation,)
+
+# Needed to unbreak GCC 7.x and above
+KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
