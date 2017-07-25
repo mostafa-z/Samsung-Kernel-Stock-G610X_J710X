@@ -409,9 +409,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -Werror \
 		   -mtune=cortex-a53 \
-		   -std=gnu89 -Wno-discarded-array-qualifiers \
-		   -Wno-switch-unreachable -Wno-logical-not-parentheses \
-		   -Wno-array-bounds -Wno-nonnull
+		   -std=gnu89 \
+		   -Wno-switch-unreachable -Wno-logical-not-parentheses
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
