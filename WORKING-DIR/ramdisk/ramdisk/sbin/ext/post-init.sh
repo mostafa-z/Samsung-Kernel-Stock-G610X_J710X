@@ -67,10 +67,6 @@ $BB chmod 666 /sys/module/lowmemorykiller/parameters/minfree
 echo "512" > /proc/sys/kernel/random/read_wakeup_threshold; #default 64
 echo "256" > /proc/sys/kernel/random/write_wakeup_threshold; #default 896
 
-# Tune UKSM
-echo 1 > /sys/kernel/mm/uksm/run;
-echo quiet > /sys/kernel/mm/uksm/cpu_governor; #default medium
-
 # take ownership and permissions
 echo 0 > /cpuhotplug/enable;
 sleep 0.5;
