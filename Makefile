@@ -409,8 +409,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -Werror \
 		   -mtune=cortex-a53 \
-		   -std=gnu89 \
-		   -Wno-switch-unreachable
+		   -std=gnu89
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
