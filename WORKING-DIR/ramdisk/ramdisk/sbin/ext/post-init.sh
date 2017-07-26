@@ -135,6 +135,49 @@ G1=interactive
 echo 1 > /cpuhotplug/enable;
 }
 
+VM_DEFAULT()
+{
+	echo 90 > /proc/sys/vm/dirty_ratio; #default 0
+	echo 70 > /proc/sys/vm/dirty_background_ratio; #default 0
+	echo 200 > /proc/sys/vm/dirty_expire_centisecs; #default 200
+	echo 500 > /proc/sys/vm/dirty_writeback_centisecs; #default 500
+	echo 60 > /proc/sys/vm/swappiness; #default 100
+	echo 10 > /proc/sys/vm/vfs_cache_pressure; #default 100
+	echo 8192 > /proc/sys/vm/min_free_kbytes; #default 6806
+	echo "256 32" > /proc/sys/vm/lowmem_reserve_ratio; #default 256 32
+	echo 3 > /proc/sys/vm/drop_caches;
+	$BB sleep 0.5s
+	$BB sync
+}
+
+VM_SPEEDMODE()
+{
+	echo 5 > /proc/sys/vm/dirty_background_ratio
+	echo 200 > /proc/sys/vm/dirty_expire_centisecs
+	echo 20 > /proc/sys/vm/dirty_ratio
+	echo 1500 > /proc/sys/vm/dirty_writeback_centisecs
+	echo 12288 > /proc/sys/vm/min_free_kbytes
+	echo 0 > /proc/sys/vm/swappiness
+	echo 100 > /proc/sys/vm/vfs_cache_pressure
+	echo 0 > /proc/sys/vm/drop_caches
+	$BB sleep 0.5s
+	$BB sync
+}
+
+VM_MITTIADJ()
+{
+	echo 10 > /proc/sys/vm/dirty_background_ratio
+	echo 500 > /proc/sys/vm/dirty_expire_centisecs
+	echo 10 > /proc/sys/vm/dirty_ratio
+	echo 100 > /proc/sys/vm/dirty_writeback_centisecs
+	echo 8192 > /proc/sys/vm/min_free_kbytes
+	echo 70 > /proc/sys/vm/swappiness
+	echo 500 > /proc/sys/vm/vfs_cache_pressure
+	echo 0 > /proc/sys/vm/drop_caches
+	$BB sleep 0.5s
+	$BB sync
+}
+
 if [ ! -d /data/.gabriel ]; then
 	$BB mkdir -p /data/.gabriel;
 fi;
@@ -147,6 +190,7 @@ OPEN_RW;
 
 # set system tuning.
 SYSTEM_TUNING;
+VM_DEFAULT;
 
 # Start any init.d scripts that may be present in the rom or added by the user
 $BB chmod -R 755 /system/etc/init.d/;
