@@ -377,7 +377,7 @@ endif
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 
-KERNELFLAGS = -pipe -DNDEBUG -O2 -mtune=cortex-a53 -ftree-vectorize -fgcse-lm -fgcse-sm -funroll-loops -fpredictive-commoning -floop-nest-optimize
+KERNELFLAGS = -pipe -DNDEBUG -O2 -mtune=cortex-a53
 MODFLAGS	= -DMODULE $(KERNELFLAGS)
 CFLAGS_MODULE	= $(MODFLAGS)
 AFLAGS_MODULE	= $(MODFLAGS)
