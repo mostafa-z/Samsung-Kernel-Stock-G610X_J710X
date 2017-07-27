@@ -135,6 +135,28 @@ G1=interactive
 echo 1 > /cpuhotplug/enable;
 }
 
+HMP_TUNING()
+{
+for a in /sys/kernel/hmp/*; do
+	$BB chmod 664 $a;
+done;
+
+echo 0 > /sys/kernel/hmp/active_down_migration;
+echo 0 > /sys/kernel/hmp/aggressive_up_migration;
+echo 0 > /sys/kernel/hmp/aggressive_yield;
+echo 1 > /sys/kernel/hmp/boost;
+echo 0 > /sys/kernel/hmp/boostpulse;
+echo 1000000 > /sys/kernel/hmp/boostpulse_duration;
+echo 256 > /sys/kernel/hmp/down_threshold;
+echo 1 > /sys/kernel/hmp/frequency_invariant_load_scale;
+echo 32 > /sys/kernel/hmp/load_avg_period_ms;
+echo 150 > /sys/kernel/hmp/sb_down_threshold;
+echo 16 > /sys/kernel/hmp/sb_load_avg_period_ms;
+echo 400 > /sys/kernel/hmp/sb_up_threshold;
+echo 0 > /sys/kernel/hmp/semiboost;
+echo 700 > /sys/kernel/hmp/up_threshold;
+}
+
 VM_DEFAULT()
 {
 	echo 90 > /proc/sys/vm/dirty_ratio; #default 0
@@ -190,6 +212,7 @@ OPEN_RW;
 
 # set system tuning.
 SYSTEM_TUNING;
+HMP_TUNING;
 VM_DEFAULT;
 
 # Start any init.d scripts that may be present in the rom or added by the user
