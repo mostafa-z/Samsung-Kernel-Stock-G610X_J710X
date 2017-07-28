@@ -56,6 +56,24 @@ KERNEL_TWEAKS()
 KERNEL_TWEAKS;
 
 # ==============================================================
+# RAM CLEANUP
+# ==============================================================
+
+RAM_CLEANUP()
+{
+	MEM_ALL=`free | grep Mem | awk '{ print $2 }'`;
+	MEM_USED=`free | grep Mem | awk '{ print $3 }'`;
+	MEM_USED_CALC=$(($MEM_USED*100/$MEM_ALL));
+
+	# do clean cache only if cache uses 80% of free memory.
+	if [ "$MEM_USED_CALC" -gt "80" ]; then
+		sync;
+		sleep 1;
+		sysctl -w vm.drop_caches=2;
+	fi;
+}
+
+# ==============================================================
 # TWEAKS: if Screen-ON
 # ==============================================================
 AWAKE_MODE()
@@ -75,6 +93,8 @@ if [ "$(cat /data/gabriel_cortex_sleep)" -eq "1" ]; then
 	echo "$(cat /cache/hmp_down_threshold)" > /sys/kernel/hmp/down_threshold;
 
 	echo "1" > /sys/kernel/printk_mode/printk_mode;
+
+	RAM_CLEANUP;
 
 	echo "0" > /data/gabriel_cortex_sleep
 fi
