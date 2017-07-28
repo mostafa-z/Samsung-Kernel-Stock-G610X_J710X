@@ -103,6 +103,10 @@ if [ "$(cat /data/gabriel_cortex_sleep)" -eq "1" ]; then
 
 	echo "$(cat /cache/fsync_enabled)" > /sys/module/sync/parameters/fsync_enabled;
 
+	# aggressive
+	echo "18432,23040,27648,34816,51200,65536" > /sys/module/lowmemorykiller/parameters/minfree;
+	echo "16" > /sys/module/lowmemorykiller/parameters/cost;
+
 	RAM_CLEANUP;
 
 	echo "0" > /data/gabriel_cortex_sleep
@@ -147,6 +151,10 @@ if [ "$CHARGER_STATE" -eq "0" ]; then
 
 	echo "$(cat /sys/module/sync/parameters/fsync_enabled)" > /cache/fsync_enabled;
 	echo "1" > /sys/module/sync/parameters/fsync_enabled;
+
+	# stock
+	echo "12288,15360,18432,21504,24576,30720" > /sys/module/lowmemorykiller/parameters/minfree;
+	echo "32" > /sys/module/lowmemorykiller/parameters/cost;
 
 	echo "1" > /data/gabriel_cortex_sleep
 fi
