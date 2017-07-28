@@ -42,6 +42,9 @@ rm -f /cache/max_cpu_percentage
 rm -f /cache/power_efficient
 rm -f /cache/hmp_up_threshold
 rm -f /cache/hmp_down_threshold
+rm -f /cache/logd;
+rm -f /cache/gentle_fair_sleepers;
+rm -f /cache/fsync_enabled;
 
 # ==============================================================
 # KERNEL-TWEAKS
@@ -94,6 +97,14 @@ if [ "$(cat /data/gabriel_cortex_sleep)" -eq "1" ]; then
 
 	echo "1" > /sys/kernel/printk_mode/printk_mode;
 
+	if [ "$(cat /cache/logd)" -eq "1" ]; then
+		start logd;
+	fi;
+
+	echo "$(cat /cache/gentle_fair_sleepers)" > /sys/kernel/sched/gentle_fair_sleepers;
+
+	echo "$(cat /cache/fsync_enabled)" > /sys/module/sync/parameters/fsync_enabled;
+
 	RAM_CLEANUP;
 
 	echo "0" > /data/gabriel_cortex_sleep
@@ -127,6 +138,19 @@ if [ "$CHARGER_STATE" -eq "0" ]; then
 	echo "500" > /sys/kernel/hmp/down_threshold;
 
 	echo "0" > /sys/kernel/printk_mode/printk_mode;
+
+	if [ "$(pgrep -f "logd" | wc -l)" -eq "1" ]; then
+		echo "1" > /cache/logd;
+		stop logd;
+	else
+		echo "0" > /cache/logd;
+	fi;
+
+	echo "$(cat /sys/kernel/sched/gentle_fair_sleepers)" > /cache/gentle_fair_sleepers;
+	echo "0" > /sys/kernel/sched/gentle_fair_sleepers;
+
+	echo "$(cat /sys/module/sync/parameters/fsync_enabled)" > /cache/fsync_enabled;
+	echo "1" > /sys/module/sync/parameters/fsync_enabled;
 
 	echo "1" > /data/gabriel_cortex_sleep
 fi
