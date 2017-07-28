@@ -93,6 +93,11 @@ $BB chmod 666 /mp-cpufreq/cluster1_max_freq
 $BB chmod 666 /mp-cpufreq/cluster1_min_freq
 $BB chmod 444 /mp-cpufreq/cluster1_freq_table
 
+echo "546000" > /mp-cpufreq/cluster0_min_freq
+echo "1586000" > /mp-cpufreq/cluster0_max_freq
+echo "546000" > /mp-cpufreq/cluster1_min_freq
+echo "1586000" > /mp-cpufreq/cluster1_max_freq
+
 #Governor Tuning
 C0=cpufreq_l
 C1=cpufreq_b
@@ -206,6 +211,11 @@ fi;
 
 if [ ! -d /data/.gabriel/logs ]; then
 	$BB mkdir -p /data/.gabriel/logs;
+fi;
+
+# start CORTEX by tree root, so it's will not be terminated.
+if [ "$(pgrep -f "cortexbrain-tune.sh" | wc -l)" -eq "0" ]; then
+	nohup sh /sbin/ext/cortexbrain-tune.sh > /data/.gabriel/cortex.txt &
 fi;
 
 OPEN_RW;
