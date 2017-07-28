@@ -82,9 +82,7 @@ RAM_CLEANUP()
 AWAKE_MODE()
 {
 if [ "$(cat /data/gabriel_cortex_sleep)" -eq "1" ]; then
-	echo "546000" > /mp-cpufreq/cluster0_min_freq;
 	echo "1586000" > /mp-cpufreq/cluster0_max_freq;
-	echo "546000" > /mp-cpufreq/cluster1_min_freq;
 	echo "1586000" > /mp-cpufreq/cluster1_max_freq;
 
 	echo "$(cat /cache/uksm_state)" > /sys/kernel/mm/uksm/run;
@@ -119,9 +117,7 @@ SLEEP_MODE()
 	CHARGER_STATE=$(cat /sys/devices/battery/power_supply/battery/charge_now)
 
 if [ "$CHARGER_STATE" -eq "0" ]; then
-	echo "546000" > /mp-cpufreq/cluster0_min_freq;
 	echo "1352000" > /mp-cpufreq/cluster0_max_freq;
-	echo "546000" > /mp-cpufreq/cluster1_min_freq;
 	echo "902000" > /mp-cpufreq/cluster1_max_freq;
 
 	echo "$(cat /sys/kernel/mm/uksm/run)" > /cache/uksm_state;
