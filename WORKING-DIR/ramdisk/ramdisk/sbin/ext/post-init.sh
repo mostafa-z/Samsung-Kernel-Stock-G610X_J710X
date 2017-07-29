@@ -90,6 +90,10 @@ $BB chmod 444 /mp-cpufreq/cluster0_freq_table
 $BB chmod 666 /mp-cpufreq/cluster1_max_freq
 $BB chmod 666 /mp-cpufreq/cluster1_min_freq
 $BB chmod 444 /mp-cpufreq/cluster1_freq_table
+
+# Set lowmemkiller settings
+echo "1" > /sys/module/lowmemorykiller/parameters/enable_adaptive_lmk
+echo "128000" > /sys/module/lowmemorykiller/parameters/vmpressure_file_min #512 MiB
 }
 
 GOV_TUNING()
