@@ -68,9 +68,6 @@ echo "512" > /proc/sys/kernel/random/read_wakeup_threshold; #default 64
 echo "256" > /proc/sys/kernel/random/write_wakeup_threshold; #default 896
 
 # take ownership and permissions
-echo 0 > /cpuhotplug/enable;
-sleep 0.5;
-
 for i in cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 cpu7; do
 	$BB chown system /sys/devices/system/cpu/$i/online
 	$BB chmod 666 /sys/devices/system/cpu/$i/online
@@ -92,47 +89,6 @@ $BB chmod 444 /mp-cpufreq/cluster0_freq_table
 $BB chmod 666 /mp-cpufreq/cluster1_max_freq
 $BB chmod 666 /mp-cpufreq/cluster1_min_freq
 $BB chmod 444 /mp-cpufreq/cluster1_freq_table
-
-#Governor Tuning
-C0=cpufreq_l
-C1=cpufreq_b
-G0=cultivation
-G1=interactive
-
-		#defaults : interactive ,cultivation
-		echo $G0 > /$C0/scaling_governor;
-		echo $G1 > /$C1/scaling_governor;
-		sleep 0.5;
-
-		# Little cluster
-		echo "45 546000:50 676000:55 757000:60 839000:65 902000:70 1014000:75 1144000:80 1248000:85 1352000:90 1482000:95 1586000:100" > /$C0/$G0/target_loads; #default 75 1248000:85 ,90
-		echo 20000 > /$C0/$G0/timer_rate; #default 20000
-		echo 0 > /$C0/$G0/above_hispeed_delay; #default x ,x
-		echo 100 > /$C0/$G0/go_hispeed_load; #default 89 ,99
-		echo 0 > /$C0/$G0/hispeed_freq; #default 900000 ,max_freq
-		echo 60000 > /$C0/$G0/min_sample_time; #default 40000 ,80000
-		echo 80000 > /$C0/$G0/max_freq_hysteresis; #default x ,0
-		echo 30000 > /$C0/$G0/timer_slack; #default 20000 ,80000
-		echo 50000 > /$C0/$G0/timer_rate_screenoff; #default x ,50000
-		echo 0 > /$C0/$G0/fastlane; #default x ,0
-		echo 0 > /$C0/$G0/align_windows; #default x ,0
-		echo 0 > /$C0/$G0/io_is_busy; #default 0 ,0
-
-		# big cluster
-		echo "90 1248000:95" > /$C1/$G1/target_loads; #default 75 1248000:85 ,90
-		echo 30000 > /$C1/$G1/timer_rate; #default 20000
-		echo "20000 902000:40000 1248000:20000" > /$C1/$G1/above_hispeed_delay; #default x ,x
-		echo 90 > /$C1/$G1/go_hispeed_load; #default 89 ,99
-		echo 902000 > /$C1/$G1/hispeed_freq; #default 900000 ,max_freq
-		echo 20000 > /$C1/$G1/min_sample_time; #default 40000 ,80000
-		echo 80000 > /$C1/$G1/max_freq_hysteresis; #default x ,0
-		echo 30000 > /$C1/$G1/timer_slack; #default 20000 ,80000
-		echo 50000 > /$C1/$G1/timer_rate_screenoff; #default x ,50000
-		echo 1 > /$C1/$G1/fastlane; #default x ,0
-		echo 0 > /$C1/$G1/align_windows; #default x ,0
-		echo 0 > /$C1/$G1/io_is_busy; #default 0 ,0
-
-echo 1 > /cpuhotplug/enable;
 }
 
 HMP_TUNING()
@@ -218,7 +174,7 @@ OPEN_RW;
 # set system tuning.
 SYSTEM_TUNING;
 HMP_TUNING;
-VM_DEFAULT;
+VM_SPEEDMODE;
 
 # Start any init.d scripts that may be present in the rom or added by the user
 $BB chmod -R 755 /system/etc/init.d/;
