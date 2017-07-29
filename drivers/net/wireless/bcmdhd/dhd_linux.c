@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_linux.c 637878 2016-05-16 04:44:38Z $
+ * $Id: dhd_linux.c 646675 2016-06-30 08:40:58Z $
  */
 
 #include <typedefs.h>
@@ -1773,8 +1773,8 @@ static void
 dhd_set_mcast_list_handler(void *handle, void *event_info, u8 event)
 {
 	dhd_info_t *dhd = handle;
-	dhd_if_t *ifp = event_info;
-	int ifidx;
+	int ifidx = (int)((long int)event_info);
+	dhd_if_t *ifp = NULL;
 
 #ifdef SOFTAP
 	bool in_ap = FALSE;
@@ -1792,6 +1792,7 @@ dhd_set_mcast_list_handler(void *handle, void *event_info, u8 event)
 	}
 
 #ifdef SOFTAP
+	ifp = dhd->iflist[ifidx];
 	flags = dhd_os_spin_lock(&dhd->pub);
 	in_ap = (ap_net_dev != NULL);
 	dhd_os_spin_unlock(&dhd->pub, flags);
@@ -1806,6 +1807,9 @@ dhd_set_mcast_list_handler(void *handle, void *event_info, u8 event)
 
 	dhd_net_if_lock_local(dhd);
 	DHD_OS_WAKE_LOCK(&dhd->pub);
+
+	/* Be sure to make corresponding (dhd_if_t*) pointer after lock() */
+	ifp = dhd->iflist[ifidx];
 
 	if (ifp == NULL || !dhd->pub.up) {
 		DHD_ERROR(("%s: interface info not available/down \n", __FUNCTION__));
@@ -1862,7 +1866,7 @@ dhd_set_multicast_list(struct net_device *dev)
 		return;
 
 	dhd->iflist[ifidx]->set_multicast = TRUE;
-	dhd_deferred_schedule_work((void *)dhd->iflist[ifidx], DHD_WQ_WORK_SET_MCAST_LIST,
+	dhd_deferred_schedule_work((void *)((long int)ifidx), DHD_WQ_WORK_SET_MCAST_LIST,
 		dhd_set_mcast_list_handler, DHD_WORK_PRIORITY_LOW);
 }
 
@@ -4348,6 +4352,9 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	if (dhd_watchdog_prio >= 0) {
 		/* Initialize watchdog thread */
 		PROC_START(dhd_watchdog_thread, dhd, &dhd->thr_wdt_ctl, 0, "dhd_watchdog_thread");
+		if (dhd->thr_wdt_ctl.thr_pid < 0) {
+			goto fail;
+		}
 
 	} else {
 		dhd->thr_wdt_ctl.thr_pid = -1;
@@ -4361,6 +4368,9 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	if (dhd_dpc_prio >= 0) {
 		/* Initialize DPC thread */
 		PROC_START(dhd_dpc_thread, dhd, &dhd->thr_dpc_ctl, 0, "dhd_dpc");
+		if (dhd->thr_dpc_ctl.thr_pid < 0) {
+			goto fail;
+		}
 	} else {
 		/*  use tasklet for dpc */
 		tasklet_init(&dhd->tasklet, dhd_dpc, (ulong)dhd);
@@ -4371,6 +4381,9 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		bzero(&dhd->pub.skbbuf[0], sizeof(void *) * MAXSKBPEND);
 		/* Initialize RXF thread */
 		PROC_START(dhd_rxf_thread, dhd, &dhd->thr_rxf_ctl, 0, "dhd_rxf");
+		if (dhd->thr_rxf_ctl.thr_pid < 0) {
+			goto fail;
+		}
 	}
 
 	dhd_state |= DHD_ATTACH_STATE_THREADS_CREATED;

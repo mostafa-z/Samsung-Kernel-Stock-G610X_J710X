@@ -180,7 +180,6 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"MH", "XZ", 11},	/* Universal if Country code is MARSHALL ISLANDS */
 	{"GL", "GP", 2},
 	{"AL", "AL", 2},
-	{"DZ", "GB", 6},
 	{"AS", "AS", 12},
 	{"AI", "AI", 1},
 	{"AF", "AD", 0},
@@ -241,7 +240,6 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"MO", "SG", 0},
 	{"MK", "MK", 2},
 	{"MW", "MW", 1},
-	{"MY", "MY", 3},
 	{"MV", "MV", 3},
 	{"MT", "MT", 4},
 	{"MQ", "MQ", 2},
@@ -276,7 +274,11 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"LK", "LK", 1},
 	{"SE", "SE", 4},
 	{"CH", "CH", 4},
+#if defined(BCM4354_CHIP)
+	{"TW", "TW", 65},
+#else
 	{"TW", "TW", 1},
+#endif /* BCM4354_CHIP */
 	{"TH", "TH", 5},
 	{"TT", "TT", 3},
 #if defined(DHD_SUPPORT_TR_212)
@@ -296,13 +298,18 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"SV", "SV", 25},
 	{"KR", "KR", 70},
 #if defined(BCM4354_CHIP) || defined(BCM43454_CHIP) || defined(BCM43455_CHIP)
+	{"AM", "AM", 1},
 	{"JP", "JP", 968},
 	{"RU", "RU", 986},
 	{"UA", "UA", 16},
+	{"MY", "MY", 19},
+	{"DZ", "DZ", 2},
 #else
 	{"JP", "JP", 45},
 	{"RU", "RU", 13},
 	{"UA", "UA", 8},
+	{"MY", "MY", 3},
+	{"DZ", "GB", 6},
 #endif /* BCM4354_CHIP || BCM43454_CHIP || BCM43455_CHIP */
 	{"GT", "GT", 1},
 	{"MN", "MN", 1},
