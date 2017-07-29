@@ -195,9 +195,11 @@ OPEN_RW;
 # Fix critical perms again after init.d mess
 CRITICAL_PERM_FIX;
 
-# disable block iostats
+# disable block iostats/rotational and set io-scheduler
 for i in /sys/block/*/queue; do
 	echo 0 > $i/iostats
+	echo 0 > $i/rotational
+	echo zen > $i/scheduler
 done;
 
 # Restore selinux
