@@ -45,6 +45,22 @@ rm -f /cache/hmp_down_threshold
 rm -f /cache/logd;
 rm -f /cache/gentle_fair_sleepers;
 rm -f /cache/fsync_enabled;
+rm -f /cache/minfree;
+rm -f /cache/cost;
+
+# ==============================================================
+# RAM-CAPACITY
+# ==============================================================
+
+	MEM_ALL=`free | grep Mem | awk '{ print $2 }'`;
+
+	if [ "$MEM_ALL" -gt "2800000" ]; then
+		echo "18432,23040,27648,51256,89600,115200" > /sys/module/lowmemorykiller/parameters/minfree;
+		echo "16" > /sys/module/lowmemorykiller/parameters/cost;
+	else
+		echo "18432,23040,27648,34816,51256,89600" > /sys/module/lowmemorykiller/parameters/minfree;
+		echo "16" > /sys/module/lowmemorykiller/parameters/cost;
+	fi;
 
 # ==============================================================
 # KERNEL-TWEAKS
@@ -103,9 +119,8 @@ if [ "$(cat /data/gabriel_cortex_sleep)" -eq "1" ]; then
 
 	echo "$(cat /cache/fsync_enabled)" > /sys/module/sync/parameters/fsync_enabled;
 
-	# aggressive
-	echo "18432,23040,27648,34816,51200,65536" > /sys/module/lowmemorykiller/parameters/minfree;
-	echo "16" > /sys/module/lowmemorykiller/parameters/cost;
+	echo "$(cat /cache/minfree)" > /sys/module/lowmemorykiller/parameters/minfree;
+	echo "$(cat /cache/cost)" > /sys/module/lowmemorykiller/parameters/cost;
 
 	RAM_CLEANUP;
 
@@ -153,7 +168,9 @@ if [ "$CHARGER_STATE" -eq "0" ]; then
 	echo "1" > /sys/module/sync/parameters/fsync_enabled;
 
 	# stock
+	echo "$(cat /sys/module/lowmemorykiller/parameters/minfree)" > /cache/minfree;
 	echo "12288,15360,18432,21504,24576,30720" > /sys/module/lowmemorykiller/parameters/minfree;
+	echo "$(cat /sys/module/lowmemorykiller/parameters/cost)" > /cache/cost;
 	echo "32" > /sys/module/lowmemorykiller/parameters/cost;
 
 	echo "1" > /data/gabriel_cortex_sleep
