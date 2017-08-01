@@ -89,6 +89,9 @@ $BB chmod 444 /mp-cpufreq/cluster0_freq_table
 $BB chmod 666 /mp-cpufreq/cluster1_max_freq
 $BB chmod 666 /mp-cpufreq/cluster1_min_freq
 $BB chmod 444 /mp-cpufreq/cluster1_freq_table
+
+echo "18432,23040,27648,51256,89600,115200" > /sys/module/lowmemorykiller/parameters/minfree;
+echo "16" > /sys/module/lowmemorykiller/parameters/cost;
 }
 
 GOV_TUNING()

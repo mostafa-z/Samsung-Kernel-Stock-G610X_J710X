@@ -49,20 +49,6 @@ rm -f /cache/minfree;
 rm -f /cache/cost;
 
 # ==============================================================
-# RAM-CAPACITY
-# ==============================================================
-
-	MEM_ALL=`free | grep Mem | awk '{ print $2 }'`;
-
-	if [ "$MEM_ALL" -gt "2800000" ]; then
-		echo "18432,23040,27648,51256,89600,115200" > /sys/module/lowmemorykiller/parameters/minfree;
-		echo "16" > /sys/module/lowmemorykiller/parameters/cost;
-	else
-		echo "18432,23040,27648,34816,51256,89600" > /sys/module/lowmemorykiller/parameters/minfree;
-		echo "16" > /sys/module/lowmemorykiller/parameters/cost;
-	fi;
-
-# ==============================================================
 # KERNEL-TWEAKS
 # ==============================================================
 KERNEL_TWEAKS()
