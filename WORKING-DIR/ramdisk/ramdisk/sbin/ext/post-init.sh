@@ -96,10 +96,11 @@ echo "16" > /sys/module/lowmemorykiller/parameters/cost;
 
 GOV_TUNING()
 {
-for i in cpufreq_l cpufreq_b; do
-	echo "902000" > /$i/interactive/hispeed_freq;
-	echo "75 546000:12 676000:68 757000:8 839000:67 902000:13 1014000:69 1144000:8 1248000:68 1352000:7 1482000:61 1586000:13" > /$i/interactive/target_loads;
-done;
+	echo "902000" > /cpufreq_l/interactive/hispeed_freq;
+	echo "75 1248000:85 1352000:92 1482000:98" > /cpufreq_l/interactive/target_loads;
+
+	echo "902000" > /cpufreq_b/interactive/hispeed_freq;
+	echo "75 546000:12 676000:68 757000:8 839000:67 902000:13 1014000:69 1144000:8 1248000:68 1352000:7 1482000:61 1586000:98" > /cpufreq_b/interactive/target_loads;
 }
 
 HMP_TUNING()
