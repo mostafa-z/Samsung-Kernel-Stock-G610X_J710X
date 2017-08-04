@@ -183,6 +183,6 @@ struct s2mu005_fled_platform_data {
 
 #ifdef CONFIG_LEDS_SUPPORT_FRONT_FLASH
 int s2mu005_led_select_ctrl(int ch);
-int s2mu005_led_mode_ctrl(int mode);
 #endif
+int s2mu005_led_mode_ctrl(int mode);
 #endif

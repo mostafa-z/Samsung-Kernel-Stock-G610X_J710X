@@ -612,10 +612,13 @@ static int cod3026x_capture_init_manual_mode(struct snd_soc_codec *codec)
 
 static int cod3026x_capture_init(struct snd_soc_codec *codec)
 {
+	struct cod3026x_priv *cod3026x = snd_soc_codec_get_drvdata(codec);
 	dev_dbg(codec->dev, "%s called\n", __func__);
 
+	mutex_lock(&cod3026x->adc_mute_lock);
 	/* enable ADC digital mute before configuring ADC */
 	cod3026x_adc_digital_mute(codec, true);
+	mutex_unlock(&cod3026x->adc_mute_lock);
 
 	/* Recording Digital  Power on */
 	snd_soc_update_bits(codec, COD3026X_40_DIGITAL_POWER,
@@ -643,6 +646,7 @@ static void cod3026x_capture_deinit_manual_mode(struct snd_soc_codec *codec)
 
 static int cod3026x_capture_deinit(struct snd_soc_codec *codec)
 {
+	struct cod3026x_priv *cod3026x = snd_soc_codec_get_drvdata(codec);
         cod3026x_capture_deinit_manual_mode(codec);
 
 	/* Recording Digital Reset on */
@@ -653,8 +657,10 @@ static int cod3026x_capture_deinit(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, COD3026X_40_DIGITAL_POWER,
 			PDB_ADCDIG_MASK, 0x0);
 
+	mutex_lock(&cod3026x->adc_mute_lock);
 	/* disable ADC digital mute after configuring ADC */
         cod3026x_adc_digital_mute(codec, false);
+	mutex_unlock(&cod3026x->adc_mute_lock);
 
 	return 0;
 }
@@ -662,6 +668,8 @@ static int cod3026x_capture_deinit(struct snd_soc_codec *codec)
 static int adc_ev(struct snd_soc_dapm_widget *w, struct snd_kcontrol *kcontrol,
 		int event)
 {
+	struct cod3026x_priv *cod3026x = snd_soc_codec_get_drvdata(w->codec);
+
 	dev_dbg(w->codec->dev, "%s called, event = %d\n", __func__, event);
 
 	switch (event) {
@@ -670,12 +678,14 @@ static int adc_ev(struct snd_soc_dapm_widget *w, struct snd_kcontrol *kcontrol,
 
 	case SND_SOC_DAPM_POST_PMU:
 		/* disable ADC digital mute after configuring ADC */
-		cod3026x_adc_digital_mute(w->codec, false);
+		queue_work(cod3026x->adc_mute_wq, &cod3026x->adc_mute_work);
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
+		mutex_lock(&cod3026x->adc_mute_lock);
 		/* disable ADC digital mute before configuring ADC */
 		cod3026x_adc_digital_mute(w->codec, true);
+		mutex_unlock(&cod3026x->adc_mute_lock);
 		break;
 
 	default:
@@ -729,30 +739,36 @@ int cod3026x_mic_bias_ev(struct snd_soc_codec *codec, int mic_bias, int event)
  *
  * Returns -1 if error, else 0
  */
-static int cod3026x_mute_mic(bool on)
+static int cod3026x_mute_mic(struct snd_soc_codec *codec, bool on)
 {
+	struct cod3026x_priv *cod3026x = snd_soc_codec_get_drvdata(codec);
 
-	if (g_cod3026x == NULL)
-		return -1;
-
-	dev_dbg(g_cod3026x->codec->dev, "%s called, %s\n", __func__,
+	dev_dbg(codec->dev, "%s called, %s\n", __func__,
 			on ? "Mute" : "Unmute");
 
 	if (on) {
-		cod3026x_adc_digital_mute(g_cod3026x->codec, true);
+		mutex_lock(&cod3026x->adc_mute_lock);
+		cod3026x_adc_digital_mute(codec, true);
+		snd_soc_update_bits(cod3026x->codec, COD3026X_12_PD_AD2,
+				PDB_MIC_BST3_MASK, 0);
+		mutex_unlock(&cod3026x->adc_mute_lock);
 	} else {
-		cod3026x_adc_digital_mute(g_cod3026x->codec, false);
+		mutex_lock(&cod3026x->adc_mute_lock);
+		snd_soc_update_bits(cod3026x->codec, COD3026X_12_PD_AD2,
+				PDB_MIC_BST3_MASK, PDB_MIC_BST3_MASK);
+		cod3026x_adc_digital_mute(codec, false);
+		mutex_unlock(&cod3026x->adc_mute_lock);
 	}
 
 	return 0;
 }
 
 /* process the button events based on the need */
-void cod3026x_process_button_ev(int code, int on)
+void cod3026x_process_button_ev(struct snd_soc_codec *codec, int code, int on)
 {
 	bool key_press = on ? true : false;
 
-	cod3026x_mute_mic(key_press);
+	cod3026x_mute_mic(codec, key_press);
 }
 
 static int cod3026_power_on_mic1(struct snd_soc_codec *codec)
@@ -2150,6 +2166,19 @@ static int cod3026x_dai_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static void cod3026x_adc_mute_work(struct work_struct *work)
+{
+	struct cod3026x_priv *cod3026x =
+		container_of(work, struct cod3026x_priv, adc_mute_work);
+	struct snd_soc_codec *codec = cod3026x->codec;
+
+	mutex_lock(&cod3026x->adc_mute_lock);
+	msleep(170);
+	dev_dbg(codec->dev, "%s called\n", __func__);
+	cod3026x_adc_digital_mute(codec, false);
+	mutex_unlock(&cod3026x->adc_mute_lock);
+}
+
 static void jack_mic_delay_work(struct work_struct *work)
 {
 	struct cod3026x_priv *cod3026x =
@@ -2485,7 +2514,7 @@ static void cod3026x_buttons_work(struct work_struct *work)
 				input_report_key(cod3026x->input, jd->button_code, 1);
 				input_sync(cod3026x->input);
 				jd->button_det = true;
-				cod3026x_process_button_ev(jd->button_code, 1);
+				cod3026x_process_button_ev(cod3026x->codec, jd->button_code, 1);
 				dev_err(cod3026x->dev, ":key %d is pressed, adc %d\n",
 						 btn_zones[i].code, adc);
 				return;
@@ -2496,7 +2525,7 @@ static void cod3026x_buttons_work(struct work_struct *work)
 		jd->button_det = false;
 		input_report_key(cod3026x->input, jd->button_code, 0);
 		input_sync(cod3026x->input);
-		cod3026x_process_button_ev(jd->button_code, 0);
+		cod3026x_process_button_ev(cod3026x->codec, jd->button_code, 0);
 		dev_err(cod3026x->dev, ":key %d released\n", jd->button_code);
 	}
 
@@ -3309,6 +3338,13 @@ static int cod3026x_codec_probe(struct snd_soc_codec *codec)
 		return -ENOMEM;
 	}
 
+	INIT_WORK(&cod3026x->adc_mute_work, cod3026x_adc_mute_work);
+	cod3026x->adc_mute_wq = create_singlethread_workqueue("adc_mute_wq");
+	if (cod3026x->adc_mute_wq == NULL) {
+		dev_err(codec->dev, "Failed to create adc_mute_wq\n");
+		return -ENOMEM;
+	}
+
 	cod3026x_adc_start(cod3026x);
 
 	cod3026x->aifrate = COD3026X_SAMPLE_RATE_48KHZ;
@@ -3324,6 +3360,8 @@ static int cod3026x_codec_probe(struct snd_soc_codec *codec)
 			cod3026x_post_fw_update_failure, codec);
 	else
 		cod3026x_post_fw_update_failure(codec);
+
+	mutex_init(&cod3026x->adc_mute_lock);
 
 	// it should be modify to move machine driver
 	cod3026x_jack_mic_register(codec);

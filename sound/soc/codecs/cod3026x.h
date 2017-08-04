@@ -102,6 +102,9 @@ struct cod3026x_priv {
 	struct workqueue_struct *jack_det_wq;
 	struct delayed_work jack_det_adc_work;
 	struct workqueue_struct *jack_det_adc_wq;
+	struct work_struct adc_mute_work;
+	struct mutex adc_mute_lock;
+	struct workqueue_struct *adc_mute_wq;
 };
 
 /*
