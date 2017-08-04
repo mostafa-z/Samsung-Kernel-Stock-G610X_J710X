@@ -1311,6 +1311,9 @@ struct ext4_sb_info {
 	unsigned long s_ext_extents;
 #endif
 
+	/* Reserved inodes count */
+	s64 s_r_inodes_count;
+
 	/* for buddy allocator */
 	struct ext4_group_info ***s_group_info;
 	struct inode *s_buddy_cache;
@@ -1675,6 +1678,12 @@ static inline int ext4_encrypted_inode(struct inode *inode)
  */
 #define EXT4_DEF_MIN_BATCH_TIME	0
 #define EXT4_DEF_MAX_BATCH_TIME	15000 /* 15ms */
+
+/*
+ * Default reserved inode count
+ */
+#define EXT4_DEF_RESERVE_INODE 4096
+#define EXT4_SEC_DATA_MAGIC 0xBAB0CAFE /* data partition magic */
 
 /*
  * Minimum number of groups in a flexgroup before we separate out

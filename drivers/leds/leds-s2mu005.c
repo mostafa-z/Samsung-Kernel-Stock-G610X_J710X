@@ -198,10 +198,13 @@ err:
 }
 #endif
 
-#if defined(CONFIG_CAMERA_USE_SOC_SENSOR) || defined(CONFIG_LEDS_SUPPORT_FRONT_FLASH)
 static void torch_led_on_off(int value)
 {
 	int ret;
+
+	pr_info("%s : value(%d), attach_ta(%d)\n",
+		__func__, value, g_led_datas[S2MU005_FLASH_LED]->attach_ta);	
+
 	if (value && g_led_datas[S2MU005_FLASH_LED]->attach_ta) { //torch on & ta attach
 		ret = s2mu005_update_reg(g_led_datas[S2MU005_FLASH_LED]->i2c,
 			S2MU005_REG_FLED_CTRL1, 0x80, 0x80);
@@ -216,7 +219,6 @@ static void torch_led_on_off(int value)
 			pr_err("%s : CHGIN_ENGH = 0 fail\n", __func__);
 	}
 }
-#endif
 
 static void led_set(struct s2mu005_led_data *led_data)
 {
@@ -540,12 +542,17 @@ int s2mu005_led_mode_ctrl(int mode)
 	int brightness = 0;
 	int ret = 0;
 
+	pr_info("%s : fled_selected_ch(%d), mode = %d\n", __func__,fled_selected_ch, mode);
 	if (fled_selected_ch == S2MU005_FLED_CH1) {
 		/* Rear Camera use gpio control, because of capture timing */
+		if ( mode == S2MU005_FLED_MODE_MOVIE)
+			torch_led_on_off(1);
+		else if (mode == S2MU005_FLED_MODE_OFF)
+			torch_led_on_off(0);
+
 		return 0;
 	}
 
-	pr_info("%s : mode = %d\n", __func__, mode);
 	switch(mode) {
 		case S2MU005_FLED_MODE_OFF:
 			/* Turn off Torch */
@@ -588,6 +595,34 @@ int s2mu005_led_mode_ctrl(int mode)
 error_set_bits:
 	pr_err("%s: can't set led level %d\n", __func__, ret);
 	return ret;
+}
+#else
+int s2mu005_led_mode_ctrl(int state)
+{
+
+	pr_info("%s : state = %d\n", __func__, state);
+
+	if (assistive_light == true) {
+		pr_info("%s : assistive_light is enabled \n", __func__);
+		return 0;
+	}
+
+	switch(state) {
+		case S2MU005_FLED_MODE_OFF:
+			torch_led_on_off(0);
+			break;
+		case S2MU005_FLED_MODE_PREFLASH:
+			break;
+		case S2MU005_FLED_MODE_FLASH:
+			break;
+		case S2MU005_FLED_MODE_MOVIE:
+			torch_led_on_off(1);
+			break;
+		default:
+			break;
+	}
+
+	return 0;
 }
 #endif
 

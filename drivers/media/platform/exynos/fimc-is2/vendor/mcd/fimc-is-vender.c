@@ -26,7 +26,7 @@
 #if defined(CONFIG_LEDS_SM5705)
 #include <linux/leds/leds-sm5705.h>
 #endif
-#if defined(CONFIG_LEDS_S2MU005_FLASH) && defined(CONFIG_LEDS_SUPPORT_FRONT_FLASH)
+#if defined(CONFIG_LEDS_S2MU005_FLASH)
 #include <linux/leds-s2mu005.h>
 #endif
 
@@ -1012,7 +1012,7 @@ int fimc_is_vender_set_torch(u32 aeflashMode)
 		s2mpb02_set_torch_current(true);
 #elif defined(CONFIG_LEDS_SM5705)
 		sm5705_fled_torch_on(SM5705_FLED_0, SM5705_FLED_MOVIE);
-#elif defined(CONFIG_LEDS_S2MU005_FLASH) && defined(CONFIG_LEDS_SUPPORT_FRONT_FLASH)
+#elif defined(CONFIG_LEDS_S2MU005_FLASH)
 		s2mu005_led_mode_ctrl(S2MU005_FLED_MODE_MOVIE);
 #elif defined(CONFIG_FLED_SM5703)
 		sm5703_led_mode_ctrl(5);
@@ -1051,7 +1051,7 @@ int fimc_is_vender_set_torch(u32 aeflashMode)
 		sky81296_torch_ctrl(0);
 #elif defined(CONFIG_LEDS_SM5705)
 		sm5705_fled_led_off(SM5705_FLED_0);
-#elif defined(CONFIG_LEDS_S2MU005_FLASH) && defined(CONFIG_LEDS_SUPPORT_FRONT_FLASH)
+#elif defined(CONFIG_LEDS_S2MU005_FLASH)
 		s2mu005_led_mode_ctrl(S2MU005_FLED_MODE_OFF);
 #elif defined(CONFIG_FLED_SM5703)
 		sm5703_led_mode_ctrl(0);
