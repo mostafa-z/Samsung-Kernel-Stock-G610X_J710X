@@ -234,8 +234,8 @@ u8 *fcache_getblk(struct super_block *sb, u32 sec)
 
 static inline int __mark_delayed_dirty(struct super_block *sb, cache_ent_t *bp)
 {
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
 #ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
+	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
 	if (fsi->vol_type == EXFAT)
 		return -ENOTSUPP;
 	
@@ -341,7 +341,7 @@ s32 fcache_release_all(struct super_block *sb)
 	s32 ret = 0;
 	cache_ent_t *bp;
 	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
-	int dirtycnt = 0;
+	s32 dirtycnt = 0;
 
 	bp = fsi->fcache.lru_list.next;
 	while (bp != &fsi->fcache.lru_list) {
@@ -372,7 +372,7 @@ s32 fcache_flush(struct super_block *sb, u32 sync)
 	s32 ret = 0;
 	cache_ent_t *bp;
 	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
-	int dirtycnt = 0;
+	s32 dirtycnt = 0;
 
 	bp = fsi->fcache.lru_list.next;
 	while (bp != &fsi->fcache.lru_list) {
@@ -593,13 +593,13 @@ s32 dcache_modify(struct super_block *sb, u32 sec)
 {
 	s32 ret = -EIO;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
 
 	set_sb_dirty(sb);
 
 	bp = __dcache_find(sb, sec);
 	if (likely(bp)) {
 #ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
+		FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
 		if (fsi->vol_type != EXFAT) {
 			bp->flag |= DIRTYBIT;
 			return 0;
@@ -676,7 +676,7 @@ s32 dcache_release_all(struct super_block *sb)
 	s32 ret = 0;
 	cache_ent_t *bp;
 	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
-	int dirtycnt = 0;
+	s32 dirtycnt = 0;
 
 	/* Connect list elements */
 	/* LRU list : (A - B - ... - bp_front) + (bp_first + ... + bp_last) */
@@ -716,8 +716,8 @@ s32 dcache_flush(struct super_block *sb, u32 sync)
 	s32 ret = 0;
 	cache_ent_t *bp;
 	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
-	int dirtycnt = 0;
-	int keepcnt = 0;
+	s32 dirtycnt = 0;
+	s32 keepcnt = 0;
 
 	/* Connect list elements */
 	/* LRU list : (A - B - ... - bp_front) + (bp_first + ... + bp_last) */

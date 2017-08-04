@@ -147,8 +147,8 @@ out:
 		est_au_sect >>= (sb->s_blocksize_bits - 9);
 	}
 
-	sdfat_log_msg(sb, KERN_INFO, "default AU size : %u sectors "
-		"(queue_au_size : [%u KB] disk_size : [%llu MB])",
+	sdfat_log_msg(sb, KERN_INFO, "set default AU sectors   : %u "
+		"(queue_au_size : %u KB, disk_size : %llu MB)",
 		est_au_sect, queue_au_size >> 10, (u64)(total_sect >> 11));
 	return est_au_sect;
 }
@@ -696,12 +696,12 @@ rewind:
 				}
 
 				if(!uniname) {
-					sdfat_debug_bug_on(1);
 					sdfat_fs_error(sb,
 						"%s : abnormal dentry "
 						"(start_clu[%u], "
 						"idx[%u])", __func__,
 						p_dir->dir, dentry);
+					sdfat_debug_bug_on(1);
 					return -EIO;
 				}
 
@@ -1276,9 +1276,6 @@ s32 mount_fat16(struct super_block *sb, pbr_t *p_pbr)
 	fsi->fs_func = &fat_fs_func;
 	fat_ent_ops_init(sb);
 
-	sdfat_log_msg(sb, KERN_INFO, "detected fs-type : %s",
-			fsi->vol_type == FAT16 ? "fat16" : "fat12" );
-	
 	if (p_bpb->state & FAT_VOL_DIRTY) {
 		fsi->vol_flag |= VOL_DIRTY;
 		sdfat_log_msg(sb, KERN_WARNING, "Volume was not properly "
@@ -1311,8 +1308,8 @@ static sector_t __calc_hidden_sect(struct super_block *sb)
 	}
 
 out:
-	sdfat_log_msg(sb, KERN_INFO, "detect start_sect of this partition "
-			"(hidden sector) : %lld", (s64)hidden);
+	sdfat_log_msg(sb, KERN_INFO, "start_sect of partition  : %lld",
+		(s64)hidden);
 	return hidden;
 
 }
@@ -1389,12 +1386,12 @@ s32 mount_fat32(struct super_block *sb, pbr_t *p_pbr)
 		/* calculate hidden sector size */
 		calc_hid_sect = __calc_hidden_sect(sb);
 		if (calc_hid_sect != hidden_sectors) {
-			sdfat_log_msg(sb, KERN_WARNING, "abnormal hidden sect "
-				"bpb(%u) != ondisk(%u)", 
+			sdfat_log_msg(sb, KERN_WARNING, "abnormal hidden "
+				"sector   : bpb(%u) != ondisk(%u)",
 				hidden_sectors, calc_hid_sect);
 			if (SDFAT_SB(sb)->options.adj_hidsect) {
 				sdfat_log_msg(sb, KERN_INFO, 
-					"adjustment hidden sector "
+					"adjustment hidden sector : "
 					"bpb(%u) -> ondisk(%u)", 
 					hidden_sectors, calc_hid_sect);
 				hidden_sectors = calc_hid_sect;
@@ -1430,8 +1427,6 @@ s32 mount_fat32(struct super_block *sb, pbr_t *p_pbr)
 		SDFAT_SB(sb)->options.defrag = 0;
 	}
 
-	sdfat_log_msg(sb, KERN_INFO, "detected fs-type : fat32");
-	
 	if (p_bpb->bsx.state & FAT_VOL_DIRTY) {
 		fsi->vol_flag |= VOL_DIRTY;
 		sdfat_log_msg(sb, KERN_WARNING, "Volume was not properly "

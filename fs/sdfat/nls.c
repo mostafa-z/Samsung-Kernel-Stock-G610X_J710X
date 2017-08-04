@@ -302,13 +302,13 @@ static s32 __nls_vfsname_to_utf16s(struct super_block *sb, const u8 *p_cstring, 
 	unilen = utf8s_to_utf16s(p_cstring, len, UTF16_HOST_ENDIAN,
 			(wchar_t *)uniname, MAX_NAME_LENGTH+2);
 	if (unilen < 0) {
-		EMSG("%s: failed to vfsname_to_utf16(err:%d) "
+		MMSG("%s: failed to vfsname_to_utf16(err:%d) "
 			"vfsnamelen:%d", __func__, unilen, len);
 		return unilen;
 	}
 
 	if (unilen > MAX_NAME_LENGTH ) {
-		EMSG("%s: failed to vfsname_to_utf16(estr:ENAMETOOLONG) "
+		MMSG("%s: failed to vfsname_to_utf16(estr:ENAMETOOLONG) "
 			"vfsnamelen:%d, unilen:%d>%d",
 			__func__, len, unilen, MAX_NAME_LENGTH);
 		return -ENAMETOOLONG;

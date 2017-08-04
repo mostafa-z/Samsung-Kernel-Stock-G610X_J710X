@@ -154,6 +154,13 @@ typedef struct {
 	};
 } HINT_T;
 
+typedef struct {
+	spinlock_t cache_lru_lock;
+	struct list_head cache_lru;
+	s32 nr_caches;
+	u32 cache_valid_id;	// for avoiding the race between alloc and free
+} EXTENT_T;
+
 /* file id structure */
 typedef struct {
 	CHAIN_T dir;
@@ -166,6 +173,7 @@ typedef struct {
 	u8  reserved[3];	// padding
 	u32 version;		// the copy of low 32bit of i_version to check the validation of hint_stat
 	s64 rwoffset;		// file offset or dentry index for readdir
+	EXTENT_T extent;	// extent cache for a file
 	HINT_T	hint_bmap;	// hint for cluster last accessed
 	HINT_T	hint_stat;	// hint for entry index we try to lookup next time
 } FILE_ID_T;
@@ -318,6 +326,7 @@ s32 fsapi_mount(struct super_block *sb);
 s32 fsapi_umount(struct super_block *sb);
 s32 fsapi_statfs(struct super_block *sb, VOL_INFO_T *info);
 s32 fsapi_sync_fs(struct super_block *sb, s32 do_sync);
+s32 fsapi_set_vol_flags(struct super_block *sb, u16 new_flag, s32 always_sync);
 
 /* file management functions */
 s32 fsapi_lookup(struct inode *inode, u8 *path, FILE_ID_T *fid);
@@ -329,7 +338,7 @@ s32 fsapi_truncate(struct inode *inode, u64 old_size, u64 new_size);
 s32 fsapi_rename(struct inode *old_parent_inode, FILE_ID_T *fid, struct inode *new_parent_inode, struct dentry *new_dentry);
 s32 fsapi_unlink(struct inode *inode, FILE_ID_T *fid);
 s32 fsapi_read_inode(struct inode *inode, DIR_ENTRY_T *info);
-s32 fsapi_write_inode(struct inode *inode, DIR_ENTRY_T *info);
+s32 fsapi_write_inode(struct inode *inode, DIR_ENTRY_T *info, int sync);
 s32 fsapi_map_clus(struct inode *inode, s32 clu_offset, u32 *clu, int dest);
 s32 fsapi_reserve_clus(struct inode *inode);
 
@@ -344,6 +353,9 @@ s32 fsapi_cache_release(struct super_block *sb);
 
 /* extra info functions */
 u32 fsapi_get_au_stat(struct super_block *sb, s32 mode);
+
+/* extent cache functions */
+void fsapi_invalidate_extent(struct inode *inode);
 
 #ifdef CONFIG_SDFAT_DFR
 /*----------------------------------------------------------------------*/

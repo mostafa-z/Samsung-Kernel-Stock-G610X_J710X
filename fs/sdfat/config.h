@@ -80,6 +80,10 @@
 //#define CONFIG_SDFAT_DELAYED_META_DIRTY /* delayed DIR/FAT dirty support */
 #endif
 
+#ifndef CONFIG_SDFAT_SUPPORT_DIR_SYNC
+//#define CONFIG_SDFAT_SUPPORT_DIR_SYNC /* support DIR_SYNC */
+#endif
+
 #ifndef CONFIG_SDFAT_CHECK_RO_ATTR
 //#define CONFIG_SDFAT_CHECK_RO_ATTR
 #endif
@@ -121,7 +125,7 @@
 #endif
 
 #ifndef CONFIG_SDFAT_DBG_BUGON
-#define CONFIG_SDFAT_DBG_BUGON
+//#define CONFIG_SDFAT_DBG_BUGON
 #endif
 
 #ifndef CONFIG_SDFAT_DBG_WARNON

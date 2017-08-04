@@ -1197,9 +1197,8 @@ static s32 exfat_alloc_cluster(struct super_block *sb, s32 num_alloc, CHAIN_T *p
 	if (IS_CLUS_EOF(hint_clu)) {
 		if (fsi->clu_srch_ptr < 2) {
 			EMSG("%s: fsi->clu_srch_ptr is invalid (%u)\n",
-					__func__,
-					fsi->clu_srch_ptr);
-			sdfat_debug_bug_on(1);
+				__func__, fsi->clu_srch_ptr);
+			ASSERT(0);
 			fsi->clu_srch_ptr = 2;
 		}
 
@@ -1211,7 +1210,7 @@ static s32 exfat_alloc_cluster(struct super_block *sb, s32 num_alloc, CHAIN_T *p
 	/* check cluster validation */
 	if ((hint_clu < 2) && (hint_clu >= fsi->num_clusters)) {
 		EMSG("%s: hint_cluster is invalid (%u)\n", __func__, hint_clu);
-		sdfat_debug_bug_on(1);
+		ASSERT(0);
 		hint_clu = 2;
 		if (p_chain->flags == 0x03) {
 			if (exfat_chain_cont_cluster( sb, p_chain->dir, num_clusters))
@@ -1456,8 +1455,6 @@ s32 mount_exfat(struct super_block *sb, pbr_t *p_pbr)
 
 	fsi->fs_func = &exfat_fs_func;
 	fat_ent_ops_init(sb);
-	
-	sdfat_log_msg(sb, KERN_INFO, "detected fs-type : exFAT");
 	
 	if (p_bpb->bsx.vol_flags & VOL_DIRTY) {
 		fsi->vol_flag |= VOL_DIRTY;

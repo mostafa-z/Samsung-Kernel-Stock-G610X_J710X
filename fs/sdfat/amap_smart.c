@@ -339,6 +339,12 @@ int amap_create(struct super_block *sb, u32 pack_ratio, u32 sect_per_au, u32 hid
 		return -ENOTSUPP;
 	}
 
+	if (fsi->num_sectors < AMAP_MIN_SUPPORT_SECTORS) {
+		sdfat_msg(sb, KERN_ERR, "smart allocation is only available "
+			"with sectors above %d", AMAP_MIN_SUPPORT_SECTORS);
+		return -ENOTSUPP;
+	}
+
 	/* AU size must be a multiple of clu_size */
 	if ((sect_per_au <= 0) || (sect_per_au & (fsi->sect_per_clus - 1))) {
 		sdfat_msg(sb, KERN_ERR,
@@ -411,22 +417,26 @@ int amap_create(struct super_block *sb, u32 pack_ratio, u32 sect_per_au, u32 hid
 	/* Allocate AU info table */
 	n_au_table = (amap->n_au + N_AU_PER_TABLE - 1) / N_AU_PER_TABLE;
 	amap->au_table = kmalloc(sizeof(AU_INFO_T *) * n_au_table, GFP_NOIO);
+
+	if (!amap->au_table) {
+		sdfat_msg(sb, KERN_ERR,
+			"failed to alloc amap->au_table\n");
+		kfree(amap);
+		return -ENOMEM;
+	}
+
 	for (i = 0; i < n_au_table; i++)
 		amap->au_table[i] = (AU_INFO_T *)get_zeroed_page(GFP_NOIO);
 
 	/* Allocate buckets indexed by # of free clusters */
 	amap->fclu_order = get_order(sizeof(FCLU_NODE_T) * amap->clusters_per_au);
-	if (amap->fclu_order > 0) {
-		// XXX: amap->clusters_per_au limitation is 512 (w/ 8 byte list_head)
-		sdfat_log_msg(sb, KERN_INFO, "multiple pages are required for AU nodes "
-				"(sect_per_clus:%d, sect_per_au:%d, "
-				"clus_per_au:%d, node_size:%lu, order:%d).",
-				fsi->sect_per_clus,
-				sect_per_au,
-				amap->clusters_per_au,
-				(unsigned long)sizeof(FCLU_NODE_T),
-				amap->fclu_order);
-	}
+
+	// XXX: amap->clusters_per_au limitation is 512 (w/ 8 byte list_head)
+	sdfat_log_msg(sb, KERN_INFO, "page orders for AU nodes : %d "
+			"(clus_per_au : %d, node_size : %lu)",
+			amap->fclu_order,
+			amap->clusters_per_au,
+			(unsigned long)sizeof(FCLU_NODE_T));
 
 	if (!amap->fclu_order)
 		amap->fclu_nodes = (FCLU_NODE_T*)get_zeroed_page(GFP_NOIO);
@@ -551,29 +561,33 @@ free_and_eio:
 
 
 /* Free AMAP related structure */
-int amap_destroy(struct super_block *sb)
+void amap_destroy(struct super_block *sb)
 {
 	AMAP_T *amap = SDFAT_SB(sb)->fsi.amap;
-	const int n_au_table = (amap->n_au + N_AU_PER_TABLE - 1) / N_AU_PER_TABLE;
+	int n_au_table;
+
+	if (!amap)
+		return;
+
 	DMSG("%s\n", __func__);
-	BUG_ON(!amap);
-	if (amap) {
-		if (amap->au_table) {
-			int i;
-			for (i = 0; i < n_au_table; i++)
-				free_page((unsigned long)amap->au_table[i]);
 
-			kfree(amap->au_table);
-		}
-		if (!amap->fclu_order)
-			free_page((unsigned long)amap->fclu_nodes);
-		else
-			vfree(amap->fclu_nodes);
-		kfree(amap);
-		SDFAT_SB(sb)->fsi.amap = NULL;
+	n_au_table = (amap->n_au + N_AU_PER_TABLE - 1) / N_AU_PER_TABLE;
+
+	if (amap->au_table) {
+		int i;
+		for (i = 0; i < n_au_table; i++)
+			free_page((unsigned long)amap->au_table[i]);
+
+		kfree(amap->au_table);
 	}
+	if (!amap->fclu_order)
+		free_page((unsigned long)amap->fclu_nodes);
+	else
+		vfree(amap->fclu_nodes);
+	kfree(amap);
+	SDFAT_SB(sb)->fsi.amap = NULL;
 
-	return 0;
+	return;
 }
 
 
