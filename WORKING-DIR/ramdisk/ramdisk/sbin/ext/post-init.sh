@@ -59,9 +59,10 @@ echo "30" > /proc/sys/kernel/panic;
 echo "0" > /proc/sys/kernel/panic_on_oops;
 
 # oom and mem perm fix
+$BB chown root:root /sys/module/lowmemorykiller/parameters/minfree;
 $BB chmod 666 /sys/module/lowmemorykiller/parameters/cost;
 $BB chmod 666 /sys/module/lowmemorykiller/parameters/adj;
-$BB chmod 666 /sys/module/lowmemorykiller/parameters/minfree
+$BB chmod 666 /sys/module/lowmemorykiller/parameters/minfree;
 
 # Tune entropy parameters.
 echo "512" > /proc/sys/kernel/random/read_wakeup_threshold; #default 64
@@ -89,9 +90,6 @@ $BB chmod 444 /mp-cpufreq/cluster0_freq_table
 $BB chmod 666 /mp-cpufreq/cluster1_max_freq
 $BB chmod 666 /mp-cpufreq/cluster1_min_freq
 $BB chmod 444 /mp-cpufreq/cluster1_freq_table
-
-echo "18432,23040,27648,51256,89600,115200" > /sys/module/lowmemorykiller/parameters/minfree;
-echo "16" > /sys/module/lowmemorykiller/parameters/cost;
 }
 
 GOV_TUNING()
@@ -225,3 +223,13 @@ fstrim -v /data
 
 TIME_NOW=$(date)
 echo "$TIME_NOW" > /data/.gabriel/boot.txt
+
+(
+sleep 10;
+
+# Set lowmemkiller settings
+echo "18432,23040,27648,51256,89600,115200" > /sys/module/lowmemorykiller/parameters/minfree;
+echo "1" > /sys/module/lowmemorykiller/parameters/enable_adaptive_lmk;
+echo "128000" > /sys/module/lowmemorykiller/parameters/vmpressure_file_min; #512 MiB
+echo "1" > /sys/module/process_reclaim/parameters/enable_process_reclaim;
+)&
