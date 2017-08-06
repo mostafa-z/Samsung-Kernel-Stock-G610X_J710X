@@ -170,7 +170,14 @@ FUNC_BUILD_KERNEL()
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 			CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' | grep :
 
+if [ -f $RDIR/arch/$ARCH/boot/Image ]; then
 	FUNC_BUILD_DTIMAGE_TARGET
+else
+	echo -e "${red}"
+	echo -e "Kernel STUCK in BUILD! no Image exist !"
+	echo -e "${restore}"
+	exit 1
+fi;
 }
 
 FUNC_BUILD_RAMDISK()
