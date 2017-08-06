@@ -148,35 +148,29 @@ FUNC_BUILD_DTIMAGE_TARGET()
 
 FUNC_BUILD_KERNEL()
 {
-		echo -e "${green}"
-		echo "-------------------------"
-        echo "START : FUNC_BUILD_KERNEL"
-		echo "-------------------------"
-		echo -e "${restore}"
-        echo "build common config="$KERNEL_DEFCONFIG ""
-        echo "build variant config="$MODEL ""
-		echo "git info="$GIT_LOG1 ""
+	echo -e "\nbuild variant config="$MODEL ""
+	echo "build common config="$KERNEL_DEFCONFIG ""
+	echo "git info="$GIT_LOG1 ""
 
-	FUNC_CLEAN_DTB
+	echo -e "\ncleaning..."
+	FUNC_CLEAN_DTB | grep :
 
 #	make ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE $KERNEL_DEFCONFIG
 #	make ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' -j $BUILD_JOB_NUMBER
 
+	echo "generating .config"
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
-			$KERNEL_DEFCONFIG || exit -1
+			$KERNEL_DEFCONFIG | grep :
+
+	echo "compiling..."
+	echo -e ""
 
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
-			CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' || exit -1
+			CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' | grep :
 
 	FUNC_BUILD_DTIMAGE_TARGET
-
-	echo -e "${green}"
-	echo "-------------------------"
-	echo "END   : FUNC_BUILD_KERNEL"
-	echo "-------------------------"
-	echo -e "${restore}"
 }
 
 FUNC_BUILD_RAMDISK()
