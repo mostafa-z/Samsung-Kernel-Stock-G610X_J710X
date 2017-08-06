@@ -15,6 +15,12 @@
  *
  * Author: Mike Chan (mike@android.com)
  *
+ * - Changelog:
+ *
+ * 'Gabriel' governor is based on the 'interactive'.
+ * 0.1 : initial version adapted from samsung interactive governor + align windows.
+ * 0.2 : add max_freq_hysteresis
+ *
  */
 
 #include <linux/cpu.h>
@@ -64,6 +70,7 @@ struct cpufreq_gabriel_cpuinfo {
 	u64 loc_floor_val_time; /* per-cpu floor_validate_time */
 	u64 pol_hispeed_val_time; /* policy hispeed_validate_time */
 	u64 loc_hispeed_val_time; /* per-cpu hispeed_validate_time */
+	u64 max_freq_hyst_start_time;
 	struct rw_semaphore enable_sem;
 	int governor_enabled;
 };
@@ -129,6 +136,8 @@ struct cpufreq_gabriel_tunables {
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
+
+	unsigned int max_freq_hysteresis;
 
 	/*
 	 * Whether to align timer windows across all CPUs. When
@@ -472,6 +481,14 @@ static void cpufreq_gabriel_timer(unsigned long data)
 	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto target_update;
+	}
+
+	if (pcpu->target_freq >= pcpu->policy->max
+	    && new_freq < pcpu->target_freq
+	    && now - pcpu->max_freq_hyst_start_time <
+	    tunables->max_freq_hysteresis) {
+		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
+		goto rearm;
 	}
 
 	pcpu->loc_hispeed_val_time = now;
@@ -864,6 +881,27 @@ static ssize_t store_hispeed_freq(struct cpufreq_gabriel_tunables *tunables,
 	return count;
 }
 
+#define show_store_one(file_name)					\
+static ssize_t show_##file_name(					\
+	struct cpufreq_gabriel_tunables *tunables, char *buf)	\
+{									\
+	return snprintf(buf, PAGE_SIZE, "%u\n", tunables->file_name);	\
+}									\
+static ssize_t store_##file_name(					\
+		struct cpufreq_gabriel_tunables *tunables,		\
+		const char *buf, size_t count)				\
+{									\
+	int ret;							\
+	unsigned long int val;						\
+									\
+	ret = kstrtoul(buf, 0, &val);				\
+	if (ret < 0)							\
+		return ret;						\
+	tunables->file_name = val;					\
+	return count;							\
+}
+show_store_one(max_freq_hysteresis);
+
 static ssize_t show_go_hispeed_load(struct cpufreq_gabriel_tunables
 		*tunables, char *buf)
 {
@@ -1103,6 +1141,7 @@ store_gov_pol_sys(boostpulse);
 show_store_gov_pol_sys(boostpulse_duration);
 show_store_gov_pol_sys(io_is_busy);
 show_store_gov_pol_sys(align_windows);
+show_store_gov_pol_sys(max_freq_hysteresis);
 
 #define gov_sys_attr_rw(_name)						\
 static struct global_attr _name##_gov_sys =				\
@@ -1127,6 +1166,7 @@ gov_sys_pol_attr_rw(boost);
 gov_sys_pol_attr_rw(boostpulse_duration);
 gov_sys_pol_attr_rw(io_is_busy);
 gov_sys_pol_attr_rw(align_windows);
+gov_sys_pol_attr_rw(max_freq_hysteresis);
 
 static struct global_attr boostpulse_gov_sys =
 	__ATTR(boostpulse, 0200, NULL, store_boostpulse_gov_sys);
@@ -1148,6 +1188,7 @@ static struct attribute *gabriel_attributes_gov_sys[] = {
 	&boostpulse_duration_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
 	&align_windows_gov_sys.attr,
+	&max_freq_hysteresis_gov_sys.attr,
 	NULL,
 };
 
@@ -1170,6 +1211,7 @@ static struct attribute *gabriel_attributes_gov_pol[] = {
 	&boostpulse_duration_gov_pol.attr,
 	&io_is_busy_gov_pol.attr,
 	&align_windows_gov_pol.attr,
+	&max_freq_hysteresis_gov_pol.attr,
 	NULL,
 };
 
