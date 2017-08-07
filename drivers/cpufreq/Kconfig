@@ -129,6 +129,10 @@ config CPU_FREQ_DEFAULT_GOV_GABRIEL
 	bool "gabriel"
 	select CPU_FREQ_GOV_GABRIEL
 
+config CPU_FREQ_DEFAULT_GOV_GABRIEL_PLUS
+	bool "gabriel_plus"
+	select CPU_FREQ_GOV_GABRIEL_PLUS	
+
 config CPU_FREQ_DEFAULT_GOV_BLU_ACTIVE
 	bool "blu_active"
 	select CPU_FREQ_GOV_BLU_ACTIVE
@@ -226,6 +230,10 @@ config CPU_FREQ_GOV_INTERACTIVE
 
 config CPU_FREQ_GOV_GABRIEL
 	tristate "'gabriel' cpufreq policy governor"
+	default y
+
+config CPU_FREQ_GOV_GABRIEL_PLUS
+	tristate "'gabriel_plus' cpufreq policy governor"
 	default y
 
 config CPU_FREQ_GOV_CONSERVATIVE
