@@ -68,6 +68,7 @@
 
 #define DEFAULT_TIMER_RATE_IDLE (50 * USEC_PER_MSEC)
 #define DEFAULT_IDLE_THRESHOLD 20
+#define DEFAULT_BUMP_FREQ_WEIGHT 150
 
 struct cpufreq_gabriel_plus_cpuinfo {
 	struct timer_list cpu_timer;
@@ -128,6 +129,7 @@ struct cpufreq_gabriel_plus_tunables {
 	unsigned long prev_timer_rate;
 	unsigned long timer_rate_idle;
 	unsigned long idle_threshold;
+	unsigned long bump_freq_weight;
 	spinlock_t above_hispeed_delay_lock;
 	unsigned int *above_hispeed_delay;
 	int nabove_hispeed_delay;
@@ -425,6 +427,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	unsigned int timer_rate_load_2 = tunables->timer_rate_load_2;
 	unsigned int timer_rate_idle = tunables->timer_rate_idle;
 	unsigned int idle_threshold = tunables->idle_threshold;
+	unsigned int bump_freq_weight;
 	unsigned int avg_near_prev_load, avg_long_prev_load;
 	unsigned int load_idx;
 	unsigned int new_freq;
@@ -491,7 +494,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 
 	if (cpu_load >= tunables->go_hispeed_load || tunables->boosted) {
 		if (pcpu->policy->cur < tunables->hispeed_freq) {
-			new_freq = tunables->hispeed_freq;
+			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
 		} else {
 			new_freq = choose_freq(pcpu, loadadjfreq);
 
@@ -1313,6 +1316,25 @@ static ssize_t store_idle_threshold(struct cpufreq_gabriel_plus_tunables
 	return count;
 }
 
+static ssize_t show_bump_freq_weight(struct cpufreq_gabriel_plus_tunables
+		*tunables, char *buf)
+{
+	return sprintf(buf, "%lu\n", tunables->bump_freq_weight);
+}
+
+static ssize_t store_bump_freq_weight(struct cpufreq_gabriel_plus_tunables
+		*tunables, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->bump_freq_weight = val;
+	return count;
+}
+
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -1363,6 +1385,7 @@ show_store_gov_pol_sys(timer_rate_load_1);
 show_store_gov_pol_sys(timer_rate_load_2);
 show_store_gov_pol_sys(timer_rate_idle);
 show_store_gov_pol_sys(idle_threshold);
+show_store_gov_pol_sys(bump_freq_weight);
 show_store_gov_pol_sys(timer_slack);
 show_store_gov_pol_sys(boost);
 store_gov_pol_sys(boostpulse);
@@ -1397,6 +1420,7 @@ gov_sys_pol_attr_rw(timer_rate_load_1);
 gov_sys_pol_attr_rw(timer_rate_load_2);
 gov_sys_pol_attr_rw(timer_rate_idle);
 gov_sys_pol_attr_rw(idle_threshold);
+gov_sys_pol_attr_rw(bump_freq_weight);
 gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(boost);
 gov_sys_pol_attr_rw(boostpulse_duration);
@@ -1426,6 +1450,7 @@ static struct attribute *gabriel_plus_attributes_gov_sys[] = {
 	&timer_rate_load_2_gov_sys.attr,
 	&timer_rate_idle_gov_sys.attr,
 	&idle_threshold_gov_sys.attr,
+	&bump_freq_weight_gov_sys.attr,
 	&timer_slack_gov_sys.attr,
 	&boost_gov_sys.attr,
 	&boostpulse_gov_sys.attr,
@@ -1457,6 +1482,7 @@ static struct attribute *gabriel_plus_attributes_gov_pol[] = {
 	&timer_rate_load_2_gov_pol.attr,
 	&timer_rate_idle_gov_pol.attr,
 	&idle_threshold_gov_pol.attr,
+	&bump_freq_weight_gov_pol.attr,
 	&timer_slack_gov_pol.attr,
 	&boost_gov_pol.attr,
 	&boostpulse_gov_pol.attr,
@@ -1544,6 +1570,7 @@ static int cpufreq_governor_gabriel_plus(struct cpufreq_policy *policy,
 			tunables->timer_rate_load_2 = DEFAULT_TIMER_RATE_LOAD_2;
 			tunables->prev_timer_rate = DEFAULT_TIMER_RATE;
 			tunables->timer_rate_idle = DEFAULT_TIMER_RATE_IDLE;
+			tunables->bump_freq_weight = DEFAULT_BUMP_FREQ_WEIGHT;
 			tunables->idle_threshold= DEFAULT_IDLE_THRESHOLD;
 			tunables->boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 			tunables->timer_slack_val = DEFAULT_TIMER_SLACK;
