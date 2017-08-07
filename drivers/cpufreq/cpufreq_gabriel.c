@@ -20,6 +20,7 @@
  * 'Gabriel' governor is based on the 'interactive'.
  * 0.1 : initial version adapted from samsung interactive governor + align windows.
  * 0.2 : add max_freq_hysteresis
+ * 0.3 : add timer_rate_idle
  *
  */
 
@@ -48,6 +49,16 @@
 #include "cpu_load_metric.h"
 #endif
 
+#define TASK_NAME_LEN 15
+#define DEFAULT_TARGET_LOAD 90
+#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
+#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
+#define DEFAULT_GO_HISPEED_LOAD 99
+#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
+
+#define DEFAULT_TIMER_RATE_IDLE (50 * USEC_PER_MSEC)
+
 struct cpufreq_gabriel_cpuinfo {
 	struct timer_list cpu_timer;
 	struct timer_list cpu_slack_timer;
@@ -73,79 +84,44 @@ struct cpufreq_gabriel_cpuinfo {
 	u64 max_freq_hyst_start_time;
 	struct rw_semaphore enable_sem;
 	int governor_enabled;
+	/* record the load of last 5 sampling intervals*/
+	unsigned int prev_load[5];
+	unsigned int prev_load_idx;
 };
 
 static DEFINE_PER_CPU(struct cpufreq_gabriel_cpuinfo, cpuinfo);
 
-#define TASK_NAME_LEN 15
 struct task_struct *speedch_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-/* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
-
-#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
-#define DEFAULT_TIMER_RATE_SUSP ((unsigned long)(50 * USEC_PER_MSEC))
-#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
 
 struct cpufreq_gabriel_tunables {
 	int usage_count;
-	/* Hi speed to bump to from lo speed when load burst (default max) */
 	unsigned int hispeed_freq;
-	/* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 99
 	unsigned long go_hispeed_load;
-	/* Target load. Lower values result in higher CPU speeds. */
 	spinlock_t target_loads_lock;
 	unsigned int *target_loads;
 	int ntarget_loads;
-	/*
-	 * The minimum amount of time to spend at a frequency before we can ramp
-	 * down.
-	 */
-#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
 	unsigned long min_sample_time;
-	/*
-	 * The sample rate of the timer used to increase frequency
-	 */
 	unsigned long timer_rate;
 	unsigned long prev_timer_rate;
-	/*
-	 * Wait this long before raising speed above hispeed, by default a
-	 * single timer interval.
-	 */
+	unsigned long timer_rate_idle;
 	spinlock_t above_hispeed_delay_lock;
 	unsigned int *above_hispeed_delay;
 	int nabove_hispeed_delay;
-	/* Non-zero means indefinite speed boost active */
 	int boost_val;
-	/* Duration of a boot pulse in usecs */
 	int boostpulse_duration_val;
-	/* End time of boost pulse in ktime converted to usecs */
 	u64 boostpulse_endtime;
 	bool boosted;
-	/*
-	 * Max additional time to wait in idle, beyond timer_rate, at speeds
-	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
-	 */
-#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 	int timer_slack_val;
 	bool io_is_busy;
-
 	unsigned int max_freq_hysteresis;
-
-	/*
-	 * Whether to align timer windows across all CPUs. When
-	 * use_sched_load is true, this flag is ignored and windows
-	 * will always be aligned.
-	 */
 	bool align_windows;
-	/* handle for get cpufreq_policy */
 	unsigned int *policy;
 };
 
@@ -424,6 +400,9 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		&per_cpu(cpuinfo, data);
 	struct cpufreq_gabriel_tunables *tunables =
 		pcpu->policy->governor_data;
+	unsigned int timer_rate_idle = tunables->timer_rate_idle;
+	unsigned int avg_near_prev_load, avg_long_prev_load;
+	unsigned int load_idx;
 	unsigned int new_freq;
 	unsigned int loadadjfreq;
 	unsigned int index;
@@ -443,6 +422,29 @@ static void cpufreq_gabriel_timer(unsigned long data)
 
 	if (WARN_ON_ONCE(!delta_time))
 		goto rearm;
+
+	/*
+	 * Average load of past five sampling. If avg_long_pre_load is lower
+	 * than 20, the system is idle and should not be interrupted by
+	 * CPUFreq governor timer.
+	 */
+	avg_long_prev_load = (pcpu->prev_load[4] +
+			      pcpu->prev_load[3] +
+			      pcpu->prev_load[2] +
+			      pcpu->prev_load[1] +
+			      pcpu->prev_load[0] + 4)/5;
+	/*update the history load*/
+	load_idx = pcpu->prev_load_idx;
+	pcpu->prev_load_idx = (load_idx + 1)%5;
+	pcpu->prev_load[pcpu->prev_load_idx] = cpu_load;
+
+	/*switch timer to timer_rate_idle when system is idle to save power*/
+	if (pcpu->policy->cur == pcpu->policy->min
+		&& avg_long_prev_load <= tunables->timer_rate
+		&& cpu_load <= tunables->timer_rate)
+		tunables->timer_rate = timer_rate_idle;
+	else
+		tunables->timer_rate = tunables->prev_timer_rate;
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
@@ -1093,6 +1095,32 @@ static ssize_t store_align_windows(struct cpufreq_gabriel_tunables *tunables,
 	return count;
 }
 
+static ssize_t show_timer_rate_idle(struct cpufreq_gabriel_tunables
+               *tunables, char *buf)
+{
+       return sprintf(buf, "%lu\n", tunables->timer_rate_idle);
+}
+
+static ssize_t store_timer_rate_idle(struct cpufreq_gabriel_tunables
+               *tunables, const char *buf, size_t count)
+{
+       int ret;
+       unsigned long val, val_round;
+
+       ret = kstrtoul(buf, 0, &val);
+       if (ret < 0)
+               return ret;
+
+       val_round = jiffies_to_usecs(usecs_to_jiffies(val));
+       if (val != val_round)
+               pr_warn("timer_rate_idle not aligned to jiffy. Rounded up to %lu\n",
+                       val_round);
+
+       tunables->timer_rate_idle = val_round;
+
+       return count;
+}
+
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -1135,6 +1163,7 @@ show_store_gov_pol_sys(hispeed_freq);
 show_store_gov_pol_sys(go_hispeed_load);
 show_store_gov_pol_sys(min_sample_time);
 show_store_gov_pol_sys(timer_rate);
+show_store_gov_pol_sys(timer_rate_idle);
 show_store_gov_pol_sys(timer_slack);
 show_store_gov_pol_sys(boost);
 store_gov_pol_sys(boostpulse);
@@ -1161,6 +1190,7 @@ gov_sys_pol_attr_rw(hispeed_freq);
 gov_sys_pol_attr_rw(go_hispeed_load);
 gov_sys_pol_attr_rw(min_sample_time);
 gov_sys_pol_attr_rw(timer_rate);
+gov_sys_pol_attr_rw(timer_rate_idle);
 gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(boost);
 gov_sys_pol_attr_rw(boostpulse_duration);
@@ -1182,6 +1212,7 @@ static struct attribute *gabriel_attributes_gov_sys[] = {
 	&go_hispeed_load_gov_sys.attr,
 	&min_sample_time_gov_sys.attr,
 	&timer_rate_gov_sys.attr,
+	&timer_rate_idle_gov_sys.attr,
 	&timer_slack_gov_sys.attr,
 	&boost_gov_sys.attr,
 	&boostpulse_gov_sys.attr,
@@ -1205,6 +1236,7 @@ static struct attribute *gabriel_attributes_gov_pol[] = {
 	&go_hispeed_load_gov_pol.attr,
 	&min_sample_time_gov_pol.attr,
 	&timer_rate_gov_pol.attr,
+	&timer_rate_idle_gov_pol.attr,
 	&timer_slack_gov_pol.attr,
 	&boost_gov_pol.attr,
 	&boostpulse_gov_pol.attr,
@@ -1285,6 +1317,7 @@ static int cpufreq_governor_gabriel(struct cpufreq_policy *policy,
 			tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 			tunables->timer_rate = DEFAULT_TIMER_RATE;
 			tunables->prev_timer_rate = DEFAULT_TIMER_RATE;
+			tunables->timer_rate_idle = DEFAULT_TIMER_RATE_IDLE;
 			tunables->boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 			tunables->timer_slack_val = DEFAULT_TIMER_SLACK;
 		} else {
