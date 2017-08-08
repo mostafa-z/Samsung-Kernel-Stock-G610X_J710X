@@ -409,7 +409,7 @@ static void cpufreq_gabriel_timer(unsigned long data)
 			new_freq = tunables->hispeed_freq;
 		} else {
 			new_freq = choose_target_freq(pcpu->policy,
-				loadadjfreq, 0, true);
+				index, 0, true);
 
 			if (new_freq > tunables->freq_calc_thresh)
 				new_freq = pcpu->policy->max * cpu_load / 100;
@@ -419,7 +419,7 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		}
 	} else {
 		new_freq = choose_target_freq(pcpu->policy,
-				loadadjfreq, 0, false);
+				index, 0, false);
 //		if (new_freq > tunables->hispeed_freq &&
 //				pcpu->policy->cur < tunables->hispeed_freq)
 //			new_freq = tunables->hispeed_freq;
