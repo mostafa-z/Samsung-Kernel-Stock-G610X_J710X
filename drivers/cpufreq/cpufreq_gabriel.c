@@ -428,6 +428,12 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		pump_dec_step = tunables->pump_dec_step_at_min_freq;
 	}
 
+	index = cpufreq_frequency_table_get_index(pcpu->policy, pcpu->policy->cur);
+	if (index < 0) {
+		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
+		goto rearm;
+	}
+
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
