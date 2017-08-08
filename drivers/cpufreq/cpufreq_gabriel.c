@@ -24,6 +24,7 @@
  * 0.4 : add idle_threshold tunable
  * 0.5 : add frequency calculation threshold
  * 0.6 : add frequency responsiveness threshold
+ * 0.7 : add timer_rate_idle frequency threshold
  *
  */
 
@@ -61,6 +62,7 @@
 #define DEFAULT_TIMER_SLACK (1 * DEFAULT_TIMER_RATE)
 
 #define DEFAULT_TIMER_RATE_IDLE (60 * USEC_PER_MSEC)
+#define DEFAULT_TIMER_RATE_IDLE_FREQ 902000
 #define DEFAULT_IDLE_THRESHOLD 20
 
 #define FREQ_RESPONSIVENESS			1248000
@@ -123,6 +125,7 @@ struct cpufreq_gabriel_tunables {
 	unsigned long timer_rate;
 	unsigned long prev_timer_rate;
 	unsigned long timer_rate_idle;
+	unsigned long timer_rate_idle_freq;
 	unsigned long idle_threshold;
 	spinlock_t above_hispeed_delay_lock;
 	unsigned int *above_hispeed_delay;
@@ -368,6 +371,7 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		pcpu->policy->governor_data;
 	unsigned int freq_calc_thresh = tunables->freq_calc_thresh;
 	unsigned int timer_rate_idle = tunables->timer_rate_idle;
+	unsigned int timer_rate_idle_freq = tunables->timer_rate_idle_freq;
 	unsigned int idle_threshold = tunables->idle_threshold;
 	unsigned int avg_near_prev_load, avg_long_prev_load;
 	unsigned int freq_responsiveness = tunables->freq_responsiveness;
@@ -412,7 +416,8 @@ static void cpufreq_gabriel_timer(unsigned long data)
 	/*switch timer to timer_rate_idle when system is idle to save power*/
 	if (pcpu->policy->cur == pcpu->policy->min
 		&& avg_long_prev_load <= idle_threshold
-		&& cpu_load <= idle_threshold)
+		&& cpu_load <= idle_threshold
+		&& pcpu->policy->cur <= timer_rate_idle_freq)
 		tunables->timer_rate = timer_rate_idle;
 	else
 		tunables->timer_rate = tunables->prev_timer_rate;
@@ -1124,6 +1129,25 @@ static ssize_t store_timer_rate_idle(struct cpufreq_gabriel_tunables
        return count;
 }
 
+static ssize_t show_timer_rate_idle_freq(struct cpufreq_gabriel_tunables *tunables,
+		char *buf)
+{
+	return sprintf(buf, "%lu\n", tunables->timer_rate_idle_freq);
+}
+
+static ssize_t store_timer_rate_idle_freq(struct cpufreq_gabriel_tunables *tunables,
+		const char *buf, size_t count)
+{
+	int ret;
+	long unsigned int val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->timer_rate_idle_freq = val;
+	return count;
+}
+
 static ssize_t show_idle_threshold(struct cpufreq_gabriel_tunables
 		*tunables, char *buf)
 {
@@ -1320,6 +1344,7 @@ show_store_gov_pol_sys(go_hispeed_load);
 show_store_gov_pol_sys(min_sample_time);
 show_store_gov_pol_sys(timer_rate);
 show_store_gov_pol_sys(timer_rate_idle);
+show_store_gov_pol_sys(timer_rate_idle_freq);
 show_store_gov_pol_sys(idle_threshold);
 show_store_gov_pol_sys(timer_slack);
 show_store_gov_pol_sys(boost);
@@ -1354,6 +1379,7 @@ gov_sys_pol_attr_rw(go_hispeed_load);
 gov_sys_pol_attr_rw(min_sample_time);
 gov_sys_pol_attr_rw(timer_rate);
 gov_sys_pol_attr_rw(timer_rate_idle);
+gov_sys_pol_attr_rw(timer_rate_idle_freq);
 gov_sys_pol_attr_rw(idle_threshold);
 gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(boost);
@@ -1383,6 +1409,7 @@ static struct attribute *gabriel_attributes_gov_sys[] = {
 	&min_sample_time_gov_sys.attr,
 	&timer_rate_gov_sys.attr,
 	&timer_rate_idle_gov_sys.attr,
+	&timer_rate_idle_freq_gov_sys.attr,
 	&idle_threshold_gov_sys.attr,
 	&timer_slack_gov_sys.attr,
 	&boost_gov_sys.attr,
@@ -1414,6 +1441,7 @@ static struct attribute *gabriel_attributes_gov_pol[] = {
 	&min_sample_time_gov_pol.attr,
 	&timer_rate_gov_pol.attr,
 	&timer_rate_idle_gov_pol.attr,
+	&timer_rate_idle_freq_gov_pol.attr,
 	&idle_threshold_gov_pol.attr,
 	&timer_slack_gov_pol.attr,
 	&boost_gov_pol.attr,
@@ -1501,6 +1529,7 @@ static int cpufreq_governor_gabriel(struct cpufreq_policy *policy,
 			tunables->timer_rate = DEFAULT_TIMER_RATE;
 			tunables->prev_timer_rate = DEFAULT_TIMER_RATE;
 			tunables->timer_rate_idle = DEFAULT_TIMER_RATE_IDLE;
+			tunables->timer_rate_idle_freq = DEFAULT_TIMER_RATE_IDLE_FREQ;
 			tunables->idle_threshold= DEFAULT_IDLE_THRESHOLD;
 			tunables->boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 			tunables->timer_slack_val = DEFAULT_TIMER_SLACK;
