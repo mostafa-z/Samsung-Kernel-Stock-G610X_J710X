@@ -22,6 +22,7 @@
  * 0.2 : add max_freq_hysteresis
  * 0.3 : add timer_rate_idle
  * 0.4 : add idle_threshold tunable
+ * 0.5 : add frequency calculation threshold
  *
  */
 
@@ -105,6 +106,7 @@ static unsigned int default_above_hispeed_delay[] = {
 struct cpufreq_gabriel_tunables {
 	int usage_count;
 	unsigned int hispeed_freq;
+	unsigned int freq_calc_thresh;
 	unsigned long go_hispeed_load;
 	spinlock_t target_loads_lock;
 	unsigned int *target_loads;
@@ -403,6 +405,7 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		&per_cpu(cpuinfo, data);
 	struct cpufreq_gabriel_tunables *tunables =
 		pcpu->policy->governor_data;
+	unsigned int freq_calc_thresh = tunables->freq_calc_thresh;
 	unsigned int timer_rate_idle = tunables->timer_rate_idle;
 	unsigned int idle_threshold = tunables->idle_threshold;
 	unsigned int avg_near_prev_load, avg_long_prev_load;
@@ -462,14 +465,19 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		} else {
 			new_freq = choose_freq(pcpu, loadadjfreq);
 
+			if (new_freq > tunables->freq_calc_thresh)
+				new_freq = pcpu->policy->max * cpu_load / 100;
+
 			if (new_freq < tunables->hispeed_freq)
 				new_freq = tunables->hispeed_freq;
 		}
 	} else {
 		new_freq = choose_freq(pcpu, loadadjfreq);
-		if (new_freq > tunables->hispeed_freq &&
-				pcpu->policy->cur < tunables->hispeed_freq)
-			new_freq = tunables->hispeed_freq;
+//		if (new_freq > tunables->hispeed_freq &&
+//				pcpu->policy->cur < tunables->hispeed_freq)
+//			new_freq = tunables->hispeed_freq;
+		if (new_freq > tunables->freq_calc_thresh)
+			new_freq = pcpu->policy->max * cpu_load / 100;
 	}
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
@@ -887,6 +895,25 @@ static ssize_t store_hispeed_freq(struct cpufreq_gabriel_tunables *tunables,
 	return count;
 }
 
+static ssize_t show_freq_calc_thresh(struct cpufreq_gabriel_tunables *tunables,
+		char *buf)
+{
+	return sprintf(buf, "%u\n", tunables->freq_calc_thresh);
+}
+
+static ssize_t store_freq_calc_thresh(struct cpufreq_gabriel_tunables *tunables,
+		const char *buf, size_t count)
+{
+	int ret;
+	long unsigned int val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->freq_calc_thresh = val;
+	return count;
+}
+
 #define show_store_one(file_name)					\
 static ssize_t show_##file_name(					\
 	struct cpufreq_gabriel_tunables *tunables, char *buf)	\
@@ -1183,6 +1210,7 @@ store_gov_pol_sys(file_name)
 show_store_gov_pol_sys(target_loads);
 show_store_gov_pol_sys(above_hispeed_delay);
 show_store_gov_pol_sys(hispeed_freq);
+show_store_gov_pol_sys(freq_calc_thresh);
 show_store_gov_pol_sys(go_hispeed_load);
 show_store_gov_pol_sys(min_sample_time);
 show_store_gov_pol_sys(timer_rate);
@@ -1211,6 +1239,7 @@ __ATTR(_name, 0664, show_##_name##_gov_pol, store_##_name##_gov_pol)
 gov_sys_pol_attr_rw(target_loads);
 gov_sys_pol_attr_rw(above_hispeed_delay);
 gov_sys_pol_attr_rw(hispeed_freq);
+gov_sys_pol_attr_rw(freq_calc_thresh);
 gov_sys_pol_attr_rw(go_hispeed_load);
 gov_sys_pol_attr_rw(min_sample_time);
 gov_sys_pol_attr_rw(timer_rate);
@@ -1234,6 +1263,7 @@ static struct attribute *gabriel_attributes_gov_sys[] = {
 	&target_loads_gov_sys.attr,
 	&above_hispeed_delay_gov_sys.attr,
 	&hispeed_freq_gov_sys.attr,
+	&freq_calc_thresh_gov_sys.attr,
 	&go_hispeed_load_gov_sys.attr,
 	&min_sample_time_gov_sys.attr,
 	&timer_rate_gov_sys.attr,
@@ -1259,6 +1289,7 @@ static struct attribute *gabriel_attributes_gov_pol[] = {
 	&target_loads_gov_pol.attr,
 	&above_hispeed_delay_gov_pol.attr,
 	&hispeed_freq_gov_pol.attr,
+	&freq_calc_thresh_gov_pol.attr,
 	&go_hispeed_load_gov_pol.attr,
 	&min_sample_time_gov_pol.attr,
 	&timer_rate_gov_pol.attr,
@@ -1419,6 +1450,7 @@ static int cpufreq_governor_gabriel(struct cpufreq_policy *policy,
 		freq_table = cpufreq_frequency_get_table(policy->cpu);
 		if (!tunables->hispeed_freq)
 			tunables->hispeed_freq = policy->max;
+		tunables->freq_calc_thresh = policy->cpuinfo.min_freq;
 
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
