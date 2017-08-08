@@ -247,94 +247,39 @@ static unsigned int freq_to_targetload(
 	return ret;
 }
 
-/*
- * If increasing frequencies never map to a lower target load then
- * choose_freq() will find the minimum frequency that does not exceed its
- * target load given the current load.
- */
-static unsigned int choose_freq(struct cpufreq_gabriel_cpuinfo *pcpu,
-		unsigned int loadadjfreq)
+static unsigned int choose_target_freq(struct cpufreq_policy *policy,
+					int index, unsigned int step, bool isup)
 {
-	unsigned int freq = pcpu->policy->cur;
-	unsigned int prevfreq, freqmin, freqmax;
-	unsigned int tl;
-	int index;
+	struct cpufreq_frequency_table *table;
+	unsigned int target_freq = 0;
+	int i = 0;
 
-	freqmin = 0;
-	freqmax = UINT_MAX;
+	if (!policy || !step)
+		return 0;
 
-	do {
-		prevfreq = freq;
-		tl = freq_to_targetload(pcpu->policy->governor_data, freq);
-
-		/*
-		 * Find the lowest frequency where the computed load is less
-		 * than or equal to the target load.
-		 */
-
-		if (cpufreq_frequency_table_target(
-			    pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
-			    CPUFREQ_RELATION_L, &index))
-			break;
-		freq = pcpu->freq_table[index].frequency;
-
-		if (freq > prevfreq) {
-			/* The previous frequency is too low. */
-			freqmin = prevfreq;
-
-			if (freq >= freqmax) {
-				/*
-				 * Find the highest frequency that is less
-				 * than freqmax.
-				 */
-				if (cpufreq_frequency_table_target(
-					    pcpu->policy, pcpu->freq_table,
-					    freqmax - 1, CPUFREQ_RELATION_H,
-					    &index))
-					break;
-				freq = pcpu->freq_table[index].frequency;
-
-				if (freq == freqmin) {
-					/*
-					 * The first frequency below freqmax
-					 * has already been found to be too
-					 * low.  freqmax is the lowest speed
-					 * we found that is fast enough.
-					 */
-					freq = freqmax;
+	table = policy->freq_table;
+	if (isup) {
+		for (i = (index + 1); (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+			if (table[i].frequency != CPUFREQ_ENTRY_INVALID) {
+				target_freq = table[i].frequency;
+				step--;
+				if (step == 0) {
 					break;
 				}
 			}
-		} else if (freq < prevfreq) {
-			/* The previous frequency is high enough. */
-			freqmax = prevfreq;
-
-			if (freq <= freqmin) {
-				/*
-				 * Find the lowest frequency that is higher
-				 * than freqmin.
-				 */
-				if (cpufreq_frequency_table_target(
-					    pcpu->policy, pcpu->freq_table,
-					    freqmin + 1, CPUFREQ_RELATION_L,
-					    &index))
+		}
+	} else {
+		for (i = (index - 1); i >= 0; i--) {
+			if (table[i].frequency != CPUFREQ_ENTRY_INVALID) {
+				target_freq = table[i].frequency;
+				step--;
+				if (step == 0) {
 					break;
-				freq = pcpu->freq_table[index].frequency;
-
-				/*
-				 * If freqmax is the first frequency above
-				 * freqmin then we have already found that
-				 * this speed is fast enough.
-				 */
-				if (freq == freqmax)
-					break;
+				}
 			}
 		}
-
-		/* If same frequency chosen as previous then done. */
-	} while (freq != prevfreq);
-
-	return freq;
+	}
+	return target_freq;
 }
 
 static u64 update_load(int cpu)
@@ -463,7 +408,8 @@ static void cpufreq_gabriel_timer(unsigned long data)
 		if (pcpu->policy->cur < tunables->hispeed_freq) {
 			new_freq = tunables->hispeed_freq;
 		} else {
-			new_freq = choose_freq(pcpu, loadadjfreq);
+			new_freq = choose_target_freq(pcpu->policy,
+				loadadjfreq, 0, true);
 
 			if (new_freq > tunables->freq_calc_thresh)
 				new_freq = pcpu->policy->max * cpu_load / 100;
@@ -472,7 +418,8 @@ static void cpufreq_gabriel_timer(unsigned long data)
 				new_freq = tunables->hispeed_freq;
 		}
 	} else {
-		new_freq = choose_freq(pcpu, loadadjfreq);
+		new_freq = choose_target_freq(pcpu->policy,
+				loadadjfreq, 0, false);
 //		if (new_freq > tunables->hispeed_freq &&
 //				pcpu->policy->cur < tunables->hispeed_freq)
 //			new_freq = tunables->hispeed_freq;
