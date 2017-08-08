@@ -58,6 +58,7 @@
 #define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
 #define DEFAULT_GO_HISPEED_LOAD 89
+#define DEFAULT_HISPEED_FREQ 902000
 #define DEFAULT_MIN_SAMPLE_TIME 0
 #define DEFAULT_TIMER_SLACK (1 * DEFAULT_TIMER_RATE)
 
@@ -1529,6 +1530,7 @@ static int cpufreq_governor_gabriel(struct cpufreq_policy *policy,
 			tunables->nabove_hispeed_delay =
 				ARRAY_SIZE(default_above_hispeed_delay);
 			tunables->go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
+			tunables->hispeed_freq = DEFAULT_HISPEED_FREQ;
 			tunables->target_loads = default_target_loads;
 			tunables->ntarget_loads = ARRAY_SIZE(default_target_loads);
 			tunables->min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
