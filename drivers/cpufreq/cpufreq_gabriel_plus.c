@@ -368,6 +368,7 @@ static u64 update_load(int cpu)
 }
 #endif
 
+#define MAX_LOCAL_LOAD 100
 static void cpufreq_gabriel_plus_timer(unsigned long data)
 {
 	u64 now;
@@ -453,7 +454,8 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	this_hispeed_freq = max(tunables->hispeed_freq, pcpu->policy->min);
 
 	if (cpu_load >= tunables->go_hispeed_load || tunables->boosted) {
-		if (pcpu->policy->cur < this_hispeed_freq) {
+		if (pcpu->policy->cur < this_hispeed_freq &&
+		    cpu_load <= MAX_LOCAL_LOAD) {
 //			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
 			new_freq = this_hispeed_freq * bump_freq_weight / 100;
 		} else {
@@ -486,7 +488,8 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 
 	new_freq = pcpu->freq_table[index].frequency;
 
-	if (pcpu->policy->cur >= this_hispeed_freq &&
+	if (cpu_load <= MAX_LOCAL_LOAD &&
+	    pcpu->policy->cur >= this_hispeed_freq &&
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->pol_hispeed_val_time <
 	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
