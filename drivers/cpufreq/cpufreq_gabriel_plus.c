@@ -449,14 +449,15 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	if (cpu_load >= tunables->go_hispeed_load) {
 		if (pcpu->policy->cur < this_hispeed_freq &&
 		    cpu_load <= tunables->max_local_load) {
-//			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
-			new_freq = this_hispeed_freq * bump_freq_weight / 100;
+			new_freq = choose_target_freq(pcpu->policy,
+				index, pump_inc_step, true);
+			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
 		} else {
 			new_freq = choose_target_freq(pcpu->policy,
 				index, pump_inc_step, true);
 
 			if (new_freq > tunables->freq_calc_thresh)
-				new_freq = pcpu->policy->max * cpu_load / 100;
+				new_freq = pcpu->policy->cur * cpu_load / 100;
 
 			if (new_freq < this_hispeed_freq)
 				new_freq = this_hispeed_freq;
@@ -468,8 +469,15 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 				pcpu->policy->cur < tunables->hispeed_freq)
 			new_freq = tunables->hispeed_freq;
 
-		if (new_freq > tunables->freq_calc_thresh)
+//		if (new_freq > tunables->freq_calc_thresh)
+//			new_freq = pcpu->policy->max * cpu_load / 100;
+
+		if (new_freq > tunables->freq_calc_thresh &&
+			cpu_load < tunables->max_local_load / 2) {
+			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
+		} else {
 			new_freq = pcpu->policy->max * cpu_load / 100;
+		}
 	}
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
