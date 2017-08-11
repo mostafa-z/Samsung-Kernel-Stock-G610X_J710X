@@ -68,6 +68,7 @@
 #define DEFAULT_TIMER_RATE_IDLE_FREQ 902000
 #define DEFAULT_IDLE_THRESHOLD 20
 #define DEFAULT_BUMP_FREQ_WEIGHT 150
+#define DEFAULT_BUMP_FREQ_WEIGHT_DIVISION 100
 #define DEFAULT_MAX_LOCAL_LOAD 100
 #define DEFAULT_MAX_LOCAL_LOAD_DIVISION 2
 
@@ -137,6 +138,7 @@ struct cpufreq_gabriel_plus_tunables {
 	unsigned long max_local_load;
 	unsigned long max_local_load_division;
 	unsigned long bump_freq_weight;
+	unsigned long bump_freq_weight_division;
 	spinlock_t above_hispeed_delay_lock;
 	unsigned int *above_hispeed_delay;
 	int nabove_hispeed_delay;
@@ -381,7 +383,8 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	unsigned int idle_threshold = tunables->idle_threshold;
 	unsigned int max_local_load = tunables->max_local_load;
 	unsigned int max_local_load_division = tunables->max_local_load_division;
-	unsigned int bump_freq_weight;
+	unsigned int bump_freq_weight = tunables->bump_freq_weight;
+	unsigned int bump_freq_weight_division = tunables->bump_freq_weight_division;
 	unsigned int avg_near_prev_load, avg_long_prev_load;
 	unsigned int freq_responsiveness = tunables->freq_responsiveness;
 	int pump_inc_step = tunables->pump_inc_step;
@@ -455,7 +458,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 		    cpu_load <= tunables->max_local_load) {
 			new_freq = choose_target_freq(pcpu->policy,
 				index, pump_inc_step, true);
-			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
+			new_freq = pcpu->policy->cur * tunables->bump_freq_weight / tunables->bump_freq_weight_division;
 
 		if (tunables->index_update)
 			index += pump_inc_step;
@@ -484,7 +487,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 
 		if (new_freq > tunables->freq_calc_thresh &&
 			cpu_load < tunables->max_local_load / tunables->max_local_load_division) {
-			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
+			new_freq = pcpu->policy->cur * tunables->bump_freq_weight / tunables->bump_freq_weight_division;
 		} else {
 			new_freq = pcpu->policy->max * cpu_load / 100;
 		}
@@ -1286,6 +1289,25 @@ static ssize_t store_bump_freq_weight(struct cpufreq_gabriel_plus_tunables
 	return count;
 }
 
+static ssize_t show_bump_freq_weight_division(struct cpufreq_gabriel_plus_tunables
+		*tunables, char *buf)
+{
+	return sprintf(buf, "%lu\n", tunables->bump_freq_weight_division);
+}
+
+static ssize_t store_bump_freq_weight_division(struct cpufreq_gabriel_plus_tunables
+		*tunables, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->bump_freq_weight_division = val;
+	return count;
+}
+
 static ssize_t show_index_update(struct cpufreq_gabriel_plus_tunables
 		*tunables, char *buf)
 {
@@ -1355,6 +1377,7 @@ show_store_gov_pol_sys(index_update);
 show_store_gov_pol_sys(max_local_load);
 show_store_gov_pol_sys(max_local_load_division);
 show_store_gov_pol_sys(bump_freq_weight);
+show_store_gov_pol_sys(bump_freq_weight_division);
 show_store_gov_pol_sys(timer_slack);
 show_store_gov_pol_sys(io_is_busy);
 show_store_gov_pol_sys(align_windows);
@@ -1391,6 +1414,7 @@ gov_sys_pol_attr_rw(index_update);
 gov_sys_pol_attr_rw(max_local_load);
 gov_sys_pol_attr_rw(max_local_load_division);
 gov_sys_pol_attr_rw(bump_freq_weight);
+gov_sys_pol_attr_rw(bump_freq_weight_division);
 gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(io_is_busy);
 gov_sys_pol_attr_rw(align_windows);
@@ -1417,6 +1441,7 @@ static struct attribute *gabriel_plus_attributes_gov_sys[] = {
 	&max_local_load_gov_sys.attr,
 	&max_local_load_division_gov_sys.attr,
 	&bump_freq_weight_gov_sys.attr,
+	&bump_freq_weight_division_gov_sys.attr,
 	&timer_slack_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
 	&align_windows_gov_sys.attr,
@@ -1450,6 +1475,7 @@ static struct attribute *gabriel_plus_attributes_gov_pol[] = {
 	&max_local_load_gov_pol.attr,
 	&max_local_load_division_gov_pol.attr,
 	&bump_freq_weight_gov_pol.attr,
+	&bump_freq_weight_division_gov_pol.attr,
 	&timer_slack_gov_pol.attr,
 	&io_is_busy_gov_pol.attr,
 	&align_windows_gov_pol.attr,
@@ -1536,6 +1562,7 @@ static int cpufreq_governor_gabriel_plus(struct cpufreq_policy *policy,
 			tunables->timer_rate_idle = DEFAULT_TIMER_RATE_IDLE;
 			tunables->timer_rate_idle_freq = DEFAULT_TIMER_RATE_IDLE_FREQ;
 			tunables->bump_freq_weight = DEFAULT_BUMP_FREQ_WEIGHT;
+			tunables->bump_freq_weight_division = DEFAULT_BUMP_FREQ_WEIGHT_DIVISION;
 			tunables->idle_threshold= DEFAULT_IDLE_THRESHOLD;
 			tunables->max_local_load= DEFAULT_MAX_LOCAL_LOAD;
 			tunables->max_local_load_division= DEFAULT_MAX_LOCAL_LOAD_DIVISION;
