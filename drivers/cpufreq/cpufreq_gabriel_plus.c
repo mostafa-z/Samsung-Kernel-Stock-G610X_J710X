@@ -69,6 +69,7 @@
 #define DEFAULT_IDLE_THRESHOLD 20
 #define DEFAULT_BUMP_FREQ_WEIGHT 150
 #define DEFAULT_MAX_LOCAL_LOAD 100
+#define DEFAULT_MAX_LOCAL_LOAD_DIVISION 2
 
 #define FREQ_RESPONSIVENESS			1248000
 
@@ -134,6 +135,7 @@ struct cpufreq_gabriel_plus_tunables {
 	unsigned long idle_threshold;
 	bool index_update;
 	unsigned long max_local_load;
+	unsigned long max_local_load_division;
 	unsigned long bump_freq_weight;
 	spinlock_t above_hispeed_delay_lock;
 	unsigned int *above_hispeed_delay;
@@ -378,6 +380,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	unsigned int timer_rate_idle_freq = tunables->timer_rate_idle_freq;
 	unsigned int idle_threshold = tunables->idle_threshold;
 	unsigned int max_local_load = tunables->max_local_load;
+	unsigned int max_local_load_division = tunables->max_local_load_division;
 	unsigned int bump_freq_weight;
 	unsigned int avg_near_prev_load, avg_long_prev_load;
 	unsigned int freq_responsiveness = tunables->freq_responsiveness;
@@ -480,7 +483,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 //			new_freq = pcpu->policy->max * cpu_load / 100;
 
 		if (new_freq > tunables->freq_calc_thresh &&
-			cpu_load < tunables->max_local_load / 2) {
+			cpu_load < tunables->max_local_load / tunables->max_local_load_division) {
 			new_freq = pcpu->policy->cur * bump_freq_weight / 100;
 		} else {
 			new_freq = pcpu->policy->max * cpu_load / 100;
@@ -1111,6 +1114,26 @@ static ssize_t store_max_local_load(struct cpufreq_gabriel_plus_tunables
 	return count;
 }
 
+static ssize_t show_max_local_load_division(struct cpufreq_gabriel_plus_tunables
+		*tunables, char *buf)
+{
+	return sprintf(buf, "%lu\n", tunables->max_local_load_division);
+}
+
+static ssize_t store_max_local_load_division(struct cpufreq_gabriel_plus_tunables
+		*tunables, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->max_local_load_division = val;
+	return count;
+}
+
+
 /* freq_responsiveness */
 static ssize_t show_freq_responsiveness(struct cpufreq_gabriel_plus_tunables *tunables,
 		char *buf)
@@ -1330,6 +1353,7 @@ show_store_gov_pol_sys(timer_rate_idle_freq);
 show_store_gov_pol_sys(idle_threshold);
 show_store_gov_pol_sys(index_update);
 show_store_gov_pol_sys(max_local_load);
+show_store_gov_pol_sys(max_local_load_division);
 show_store_gov_pol_sys(bump_freq_weight);
 show_store_gov_pol_sys(timer_slack);
 show_store_gov_pol_sys(io_is_busy);
@@ -1365,6 +1389,7 @@ gov_sys_pol_attr_rw(timer_rate_idle_freq);
 gov_sys_pol_attr_rw(idle_threshold);
 gov_sys_pol_attr_rw(index_update);
 gov_sys_pol_attr_rw(max_local_load);
+gov_sys_pol_attr_rw(max_local_load_division);
 gov_sys_pol_attr_rw(bump_freq_weight);
 gov_sys_pol_attr_rw(timer_slack);
 gov_sys_pol_attr_rw(io_is_busy);
@@ -1390,6 +1415,7 @@ static struct attribute *gabriel_plus_attributes_gov_sys[] = {
 	&idle_threshold_gov_sys.attr,
 	&index_update_gov_sys.attr,
 	&max_local_load_gov_sys.attr,
+	&max_local_load_division_gov_sys.attr,
 	&bump_freq_weight_gov_sys.attr,
 	&timer_slack_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
@@ -1422,6 +1448,7 @@ static struct attribute *gabriel_plus_attributes_gov_pol[] = {
 	&idle_threshold_gov_pol.attr,
 	&index_update_gov_pol.attr,
 	&max_local_load_gov_pol.attr,
+	&max_local_load_division_gov_pol.attr,
 	&bump_freq_weight_gov_pol.attr,
 	&timer_slack_gov_pol.attr,
 	&io_is_busy_gov_pol.attr,
@@ -1511,6 +1538,7 @@ static int cpufreq_governor_gabriel_plus(struct cpufreq_policy *policy,
 			tunables->bump_freq_weight = DEFAULT_BUMP_FREQ_WEIGHT;
 			tunables->idle_threshold= DEFAULT_IDLE_THRESHOLD;
 			tunables->max_local_load= DEFAULT_MAX_LOCAL_LOAD;
+			tunables->max_local_load_division= DEFAULT_MAX_LOCAL_LOAD_DIVISION;
 			tunables->timer_slack_val = DEFAULT_TIMER_SLACK;
 			tunables->freq_responsiveness = FREQ_RESPONSIVENESS;
 			tunables->pump_inc_step_at_min_freq = PUMP_INC_STEP_AT_MIN_FREQ;
