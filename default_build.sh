@@ -240,6 +240,7 @@ FUNC_BUILD_ZIP()
 
 	mv -f $WD/tools/image-new.img $WD/temp/boot.img
 	mv -f $RDIR/build.log $WD/temp/build.log
+	\cp $RDIR/.config $WD/temp/kernel_config_view_only
 
 	\cp -r $WD/package/* $WD/temp
 
