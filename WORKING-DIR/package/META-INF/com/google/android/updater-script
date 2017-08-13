@@ -1,0 +1,33 @@
+ui_print("   _____     __       _     __");
+ui_print("  / ___/__ _/ /  ____(_)__ / /");
+ui_print(" / (_ / _ `/ _ \/ __/ / -_) / ");
+ui_print(" \___/\_,_/_.__/_/ /_/\__/_/  ");
+ui_print(" ");
+
+#mount system
+package_extract_file("mount.sh", "/tmp/mount.sh");
+package_extract_file("busybox_tiny", "/tmp/busybox");
+set_perm(0, 0, 0755, "/tmp/mount.sh");
+set_perm(0, 0, 0755, "/tmp/busybox");
+run_program("/tmp/mount.sh");
+
+#load system stuff
+package_extract_dir("system", "/system");
+
+#F2FS Tools thanks to xdabbeb@xda
+set_metadata("/system/bin/parse.f2fs", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata("/system/bin/fibmap.f2fs", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata("/system/bin/f2fstat", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata("/system/bin/mkfs.f2fs", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata("/system/bin/fsck.f2fs", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+
+package_extract_file("boot.img", "/tmp/boot.img");
+package_extract_file("install.sh", "/tmp/install.sh");
+set_perm(0, 0, 0755, "/tmp/install.sh");
+
+ui_print("Installing kernel");
+assert(run_program("/tmp/install.sh") == 0);
+ui_print("Kernel Installed! enjoy :)");
+
+#cleanup
+unmount("/system");
