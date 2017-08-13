@@ -34,7 +34,7 @@ source "drivers/video/fbdev/exynos/decon_8890/Kconfig"
 endif # SOC_EXYNOS8890
 
 if SOC_EXYNOS7870
-source "drivers/video/fbdev/exynos/decon_7870/Kconfig"
+source "drivers/video/fbdev/exynos/decon_on7x_7870/Kconfig"
 endif # SOC_EXYNOS7870
 
 endif # EXYNOS_VIDEO
