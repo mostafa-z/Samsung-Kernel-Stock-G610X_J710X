@@ -1,2 +1,5 @@
 *.gz
-split_img/*
+
+# Generated files
+!*
+
