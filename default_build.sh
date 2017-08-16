@@ -1,12 +1,11 @@
 #!/bin/bash
-# kernel build script by Tkkg1994 v0.6 (optimized from apq8084 kernel source)
+# adapted from Tkkg1994's kernel build script
 
 green='\033[01;32m'
 red='\033[01;31m'
 blink_red='\033[05;31m'
 restore='\033[0m'
 
-export MODEL=on7xelte
 export ARCH=arm64
 export BUILD_CROSS_COMPILE=android-toolchain-arm64/bin/arm-eabi-
 export SYSROOT=android-toolchain-arm64/aarch64-SMG610-linux-gnu/sysroot/
@@ -23,20 +22,15 @@ WD=$RDIR/WORKING-DIR
 RK=$RDIR/READY-KERNEL
 PAGE_SIZE=2048
 DTB_PADDING=0
-KERNEL_DEFCONFIG=on7xelteswa_00_defconfig
-NAME=Gabriel-$(grep "CONFIG_LOCALVERSION=" $KERNEL_DEFCONFIG | cut -c 25-28);
 
 FUNC_CLEAN_DTB()
 {
 	make ARCH=$ARCH mrproper;
 	make clean;
 
-
 # force regeneration of .dtb and zImage files for every compile
 	rm -f arch/$ARCH/boot/*.dtb
 	rm -f arch/$ARCH/boot/*.cmd
-	rm -f arch/$ARCH/boot/zImage
-	rm -f arch/$ARCH/boot/Image
 
 	if [ -d $WD/temp ]; then
 		rm -rf $WD/temp/*
@@ -60,25 +54,9 @@ FUNC_CLEAN_DTB()
 	for i in $(find "$RDIR"/ -name "dtb.img"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$RDIR"/ -name "*.zip" -not -path "*$RK/*"); do
-		rm -fv "$i";
-	done;
 	for i in $(find "$RDIR"/ -name "zImage"); do
 		rm -fv "$i";
 	done;
-	for i in $(find "$RDIR"/ -name "kernel_config_view_only"); do
-		rm -fv "$i";
-	done;
-
-#	if ! [ -d $RDIR/arch/$ARCH/boot/dts ] ; then
-#		echo "no directory : "$RDIR/arch/$ARCH/boot/dts""
-#	else
-#		echo "rm files in : "$RDIR/arch/$ARCH/boot/dts/*.dtb""
-#		rm $RDIR/arch/$ARCH/boot/dts/*.dtb
-#		rm $RDIR/arch/$ARCH/boot/dtb/*.dtb
-#		rm $RDIR/arch/$ARCH/boot/boot.img-dtb
-#		rm $RDIR/arch/$ARCH/boot/boot.img-zImage
-#	fi
 
 	git checkout android-toolchain-arm64/
 }
@@ -95,6 +73,10 @@ FUNC_CLEAN_POST_BUILD()
 	for f in $PBFILES; do
 		git checkout $f
 	done
+
+	rm -f $WD/tools/ramdisk-new.cpio.gz
+	rm -f $WD/tools/split_img/boot.img-dtb
+	rm -f $WD/tools/split_img/boot.img-zImage
 }
 
 FUNC_BUILD_DTIMAGE_TARGET()
@@ -155,9 +137,6 @@ FUNC_BUILD_KERNEL()
 	echo -e "\ncleaning..."
 	FUNC_CLEAN_DTB | grep :
 
-#	make ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE $KERNEL_DEFCONFIG
-#	make ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE CC='ccache '${BUILD_CROSS_COMPILE}gcc' --sysroot='$SYSROOT'' -j $BUILD_JOB_NUMBER
-
 	echo "generating .config"
 	make -j$BUILD_JOB_NUMBER ARCH=$ARCH \
 			CROSS_COMPILE=$BUILD_CROSS_COMPILE \
@@ -182,13 +161,10 @@ fi;
 
 FUNC_BUILD_RAMDISK()
 {
-	mv $RDIR/arch/$ARCH/boot/Image $RDIR/arch/$ARCH/boot/boot.img-zImage
-	mv $RDIR/arch/$ARCH/boot/dtb.img $RDIR/arch/$ARCH/boot/boot.img-dtb
-
 	rm -f $WD/tools/split_img/boot.img-zImage
 	rm -f $WD/tools/split_img/boot.img-dtb
-	mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $WD/tools/split_img/boot.img-zImage
-	mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $WD/tools/split_img/boot.img-dtb
+	mv -f $RDIR/arch/$ARCH/boot/Image $WD/tools/split_img/boot.img-zImage
+	mv -f $RDIR/arch/$ARCH/boot/dtb.img $WD/tools/split_img/boot.img-dtb
 
 	if [ -d $WD/tools/ramdisk ]; then
 		rm -rf $WD/tools/ramdisk/*
@@ -228,7 +204,7 @@ FUNC_BUILD_ZIP()
 	fi;
 
 # to generate new file name if exist.(add a digit to new one)
-	FILENAME=($NAME-$(date +"[%d-%m-%y]")-$MODEL);
+	FILENAME=(Gabriel-$(date +"[%d-%m-%y]")-$MODEL);
 
 	ZIPFILE=$FILENAME
 	if [[ -e $RK/$ZIPFILE.zip ]] ; then
