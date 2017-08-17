@@ -159,9 +159,9 @@ dump_boot;
 
 # begin ramdisk changes
 
-# init.g610f.rc
-#backup_file init.g610f.rc;
-#append_file init.g610f.rc "Gabriel-post_boot" init.g3.patch;
+# init.rc
+backup_file init.rc;
+append_file init.rc "bbinstall" init.patch;
 
 # end ramdisk changes
 
