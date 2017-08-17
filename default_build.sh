@@ -159,7 +159,7 @@ else
 fi;
 }
 
-FUNC_BUILD_RAMDISK()
+FUNC_BUILD_RAMDISK_SAM()
 {
 	rm -f $WD/tools/split_img/boot.img-zImage
 	rm -f $WD/tools/split_img/boot.img-dtb
@@ -195,7 +195,7 @@ FUNC_BUILD_RAMDISK()
 	rm -rf $WD/tools/ramdisk/*
 }
 
-FUNC_BUILD_ZIP()
+FUNC_BUILD_ZIP_SAM()
 {
 	if [ -d $WD/temp ]; then
 		rm -rf $WD/temp/*
@@ -220,6 +220,49 @@ FUNC_BUILD_ZIP()
 	\cp $RDIR/.config $WD/temp/kernel_config_view_only
 
 	\cp -r $WD/package/* $WD/temp
+
+	cd $WD/temp
+	zip kernel.zip -r * > /dev/null
+	cd $RDIR
+
+	cp $WD/temp/kernel.zip $RK/$FILENAME.zip
+	md5sum $RK/$FILENAME.zip > $RK/$FILENAME.zip.md5
+}
+
+FUNC_BUILD_RAMDISK_ANY()
+{
+	if [ -d $WD/temp ]; then
+		rm -rf $WD/temp/*
+	else
+		mkdir $WD/temp
+	fi;
+
+	rm -f $WD/tools/split_img/boot.img-zImage
+	rm -f $WD/tools/split_img/boot.img-dtb
+	rm -rf $WD/tools/ramdisk/*
+
+	mv -f $RDIR/arch/$ARCH/boot/Image $WD/temp/zImage
+	mv -f $RDIR/arch/$ARCH/boot/dtb.img $WD/temp/dtb
+
+	\cp -r $WD/anykernel/* $WD/temp
+
+	mv -f $RDIR/build.log $WD/temp/build.log
+	\cp $RDIR/.config $WD/temp/kernel_config_view_only
+}
+
+FUNC_BUILD_ZIP_ANY()
+{
+# to generate new file name if exist.(add a digit to new one)
+	FILENAME=(Gabriel-$(date +"[%d-%m-%y]")-$MODEL);
+
+	ZIPFILE=$FILENAME
+	if [[ -e $RK/$ZIPFILE.zip ]] ; then
+			i=0
+		while [[ -e $RK/$ZIPFILE-$i.zip ]] ; do
+			let i++
+		done
+	    FILENAME=$ZIPFILE-$i
+	fi
 
 	cd $WD/temp
 	zip kernel.zip -r * > /dev/null
@@ -260,8 +303,8 @@ rm -rf ./build.log
 	DATE_START=$(date +"%s")
 
 	FUNC_BUILD_KERNEL
-	FUNC_BUILD_RAMDISK
-	FUNC_BUILD_ZIP
+	FUNC_BUILD_RAMDISK_ANY
+	FUNC_BUILD_ZIP_ANY
 	FUNC_CLEAN_POST_BUILD
 
 	DATE_END=$(date +"%s")
