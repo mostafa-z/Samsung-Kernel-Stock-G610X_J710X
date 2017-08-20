@@ -147,6 +147,8 @@ struct cpufreq_gabriel_plus_tunables {
 	bool io_is_busy;
 	unsigned int max_freq_hysteresis;
 	bool align_windows;
+	bool fast_ramp_up;
+	bool fast_ramp_down;
 	unsigned int *policy;
 	/*
 	 * CPUs frequency scaling
@@ -458,7 +460,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 
 	if (cpu_load >= tunables->go_hispeed_load) {
 		if (pcpu->policy->cur < this_hispeed_freq &&
-		    cpu_load <= tunables->max_local_load) {
+		    (!tunables->fast_ramp_up || cpu_load <= tunables->max_local_load)) {
 			if (tunables->go_hispeed_load_adt_freq_calc) {
 				new_freq = choose_target_freq(pcpu->policy,
 					index, pump_inc_step, true);
@@ -508,7 +510,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 
 	new_freq = pcpu->freq_table[index].frequency;
 
-	if (cpu_load <= tunables->max_local_load &&
+	if ((!tunables->fast_ramp_up || cpu_load <= tunables->max_local_load) &&
 	    pcpu->policy->cur >= this_hispeed_freq &&
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->pol_hispeed_val_time <
@@ -518,6 +520,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	}
 
 	if (pcpu->target_freq >= pcpu->policy->max
+	    && !tunables->fast_ramp_down
 	    && new_freq < pcpu->target_freq
 	    && now - pcpu->max_freq_hyst_start_time <
 	    tunables->max_freq_hysteresis) {
@@ -532,7 +535,7 @@ static void cpufreq_gabriel_plus_timer(unsigned long data)
 	 * floor frequency for the minimum sample time since last validated.
 	 */
 	max_fvtime = max(pcpu->pol_floor_val_time, pcpu->loc_floor_val_time);
-	if (new_freq < pcpu->floor_freq &&
+	if (!tunables->fast_ramp_down && new_freq < pcpu->floor_freq &&
 	    pcpu->target_freq >= pcpu->policy->cur) {
 		if (now - max_fvtime < tunables->min_sample_time) {
 			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
@@ -1360,6 +1363,45 @@ static ssize_t store_go_hispeed_load_adt_freq_calc(struct cpufreq_gabriel_plus_t
 	tunables->go_hispeed_load_adt_freq_calc = val;
 	return count;
 }
+
+static ssize_t show_fast_ramp_up(struct cpufreq_gabriel_plus_tunables
+		*tunables, char *buf)
+{
+	return sprintf(buf, "%u\n", tunables->fast_ramp_up);
+}
+
+static ssize_t store_fast_ramp_up(struct cpufreq_gabriel_plus_tunables
+		*tunables, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->fast_ramp_up = val;
+	return count;
+}
+
+static ssize_t show_fast_ramp_down(struct cpufreq_gabriel_plus_tunables
+		*tunables, char *buf)
+{
+	return sprintf(buf, "%u\n", tunables->fast_ramp_down);
+}
+
+static ssize_t store_fast_ramp_down(struct cpufreq_gabriel_plus_tunables
+		*tunables, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->fast_ramp_down = val;
+	return count;
+}
+
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -1421,6 +1463,8 @@ show_store_gov_pol_sys(pump_inc_step_at_min_freq);
 show_store_gov_pol_sys(pump_inc_step);
 show_store_gov_pol_sys(pump_dec_step_at_min_freq);
 show_store_gov_pol_sys(pump_dec_step);
+show_store_gov_pol_sys(fast_ramp_up);
+show_store_gov_pol_sys(fast_ramp_down);
 
 #define gov_sys_attr_rw(_name)						\
 static struct global_attr _name##_gov_sys =				\
@@ -1459,6 +1503,8 @@ gov_sys_pol_attr_rw(pump_inc_step_at_min_freq);
 gov_sys_pol_attr_rw(pump_inc_step);
 gov_sys_pol_attr_rw(pump_dec_step_at_min_freq);
 gov_sys_pol_attr_rw(pump_dec_step);
+gov_sys_pol_attr_rw(fast_ramp_up);
+gov_sys_pol_attr_rw(fast_ramp_down);
 
 /* One Governor instance for entire system */
 static struct attribute *gabriel_plus_attributes_gov_sys[] = {
@@ -1487,6 +1533,8 @@ static struct attribute *gabriel_plus_attributes_gov_sys[] = {
 	&pump_inc_step_gov_sys.attr,
 	&pump_dec_step_at_min_freq_gov_sys.attr,
 	&pump_dec_step_gov_sys.attr,
+	&fast_ramp_up_gov_sys.attr,
+	&fast_ramp_down_gov_sys.attr,
 	NULL,
 };
 
@@ -1522,6 +1570,8 @@ static struct attribute *gabriel_plus_attributes_gov_pol[] = {
 	&pump_inc_step_gov_pol.attr,
 	&pump_dec_step_at_min_freq_gov_pol.attr,
 	&pump_dec_step_gov_pol.attr,
+	&fast_ramp_up_gov_pol.attr,
+	&fast_ramp_down_gov_pol.attr,
 	NULL,
 };
 
