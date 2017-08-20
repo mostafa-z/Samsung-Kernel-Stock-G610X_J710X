@@ -54,6 +54,9 @@
 #include "cpu_load_metric.h"
 #endif
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/cpufreq_gabriel.h>
+
 #define TASK_NAME_LEN 15
 #define DEFAULT_TARGET_LOAD 80
 #define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
@@ -493,6 +496,9 @@ static void cpufreq_gabriel_timer(unsigned long data)
 	    new_freq > pcpu->policy->cur &&
 	    now - pcpu->pol_hispeed_val_time <
 	    freq_to_above_hispeed_delay(tunables, pcpu->policy->cur)) {
+		trace_cpufreq_gabriel_notyet(
+			data, cpu_load, pcpu->target_freq,
+			pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto target_update;
 	}
@@ -501,6 +507,9 @@ static void cpufreq_gabriel_timer(unsigned long data)
 	    && new_freq < pcpu->target_freq
 	    && now - pcpu->max_freq_hyst_start_time <
 	    tunables->max_freq_hysteresis) {
+			trace_cpufreq_gabriel_notyet(
+				data, cpu_load, pcpu->target_freq,
+				pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
@@ -537,9 +546,15 @@ static void cpufreq_gabriel_timer(unsigned long data)
 
 	if (pcpu->target_freq == new_freq &&
 			pcpu->target_freq <= pcpu->policy->cur) {
+		trace_cpufreq_gabriel_already(
+			data, cpu_load, pcpu->target_freq,
+			pcpu->policy->cur, new_freq);
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
 	}
+
+	trace_cpufreq_gabriel_target(data, cpu_load, pcpu->target_freq,
+					 pcpu->policy->cur, new_freq);
 
 	pcpu->target_freq = new_freq;
 	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
@@ -657,6 +672,9 @@ static int cpufreq_gabriel_speedch_task(void *data)
 #if defined(CONFIG_CPU_THERMAL_IPA)
 			ipa_cpufreq_requested(pcpu->policy, max_freq);
 #endif
+			trace_cpufreq_gabriel_setspeed(cpu,
+						     pcpu->target_freq,
+						     pcpu->policy->cur);
 
 			up_read(&pcpu->enable_sem);
 		}
@@ -1047,10 +1065,12 @@ static ssize_t store_boost(struct cpufreq_gabriel_tunables *tunables,
 	tunables->boost_val = val;
 
 	if (tunables->boost_val) {
+		trace_cpufreq_gabriel_boost("on");
 		if (!tunables->boosted)
 			cpufreq_gabriel_boost(tunables);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
+		trace_cpufreq_gabriel_unboost("off");
 	}
 
 	return count;
@@ -1068,6 +1088,7 @@ static ssize_t store_boostpulse(struct cpufreq_gabriel_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
+	trace_cpufreq_gabriel_boost("pulse");
 	if (!tunables->boosted)
 		cpufreq_gabriel_boost(tunables);
 	return count;
@@ -1820,6 +1841,8 @@ static int cpufreq_gabriel_cluster1_min_qos_handler(struct notifier_block *b,
 		goto exit;
 	}
 
+	trace_cpufreq_gabriel_cpu_min_qos(cpu, val, pcpu->policy->cur);
+
 	if (val < pcpu->policy->cur) {
 		tunables = pcpu->policy->governor_data;
 
@@ -1869,6 +1892,8 @@ static int cpufreq_gabriel_cluster1_max_qos_handler(struct notifier_block *b,
 		goto exit;
 	}
 
+	trace_cpufreq_gabriel_cpu_max_qos(cpu, val, pcpu->policy->cur);
+
 	if (val > pcpu->policy->cur) {
 		tunables = pcpu->policy->governor_data;
 
@@ -1914,6 +1939,8 @@ static int cpufreq_gabriel_cluster0_min_qos_handler(struct notifier_block *b,
 		goto exit;
 	}
 
+	trace_cpufreq_gabriel_kfc_min_qos(0, val, pcpu->policy->cur);
+
 	if (val < pcpu->policy->cur) {
 		tunables = pcpu->policy->governor_data;
 
@@ -1957,6 +1984,8 @@ static int cpufreq_gabriel_cluster0_max_qos_handler(struct notifier_block *b,
 		ret = NOTIFY_BAD;
 		goto exit;
 	}
+
+	trace_cpufreq_gabriel_kfc_max_qos(0, val, pcpu->policy->cur);
 
 	if (val > pcpu->policy->cur) {
 		tunables = pcpu->policy->governor_data;
