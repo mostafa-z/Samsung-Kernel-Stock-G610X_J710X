@@ -275,6 +275,22 @@ FUNC_BUILD_ZIP_ANY()
 }
 
 echo -e "${green}"
+echo "----------------"
+echo "Which Ramdisk ?!";
+echo "----------------"
+echo -e "${restore}"
+select CHOICE in samsung anykernel; do
+	case "$CHOICE" in
+		"samsung")
+			RAMDTYPE=SAM
+			break;;
+		"anykernel")
+			RAMDTYPE=ANY
+			break;;
+	esac;
+done;
+
+echo -e "${green}"
 echo "----------------------"
 echo "Which kernel config ?!";
 echo "----------------------"
@@ -305,8 +321,8 @@ rm -rf ./build.log
 	DATE_START=$(date +"%s")
 
 	FUNC_BUILD_KERNEL
-	FUNC_BUILD_RAMDISK_ANY
-	FUNC_BUILD_ZIP_ANY
+	FUNC_BUILD_RAMDISK_$RAMDTYPE
+	FUNC_BUILD_ZIP_$RAMDTYPE
 	FUNC_CLEAN_POST_BUILD
 
 	DATE_END=$(date +"%s")
